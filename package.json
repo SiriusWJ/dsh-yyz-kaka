@@ -1,19 +1,22 @@
 {
   "name": "dsh-yyz-kaka",
-  "version": "0.1.0",
-  "description": "咔咔：一只住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格、跨会话共享记忆、会写日记做梦、有嗓子也有作息。Kaka is a crab companion for DeepSeek Harness: its own agent preset, shared long-term memory, diary and dreams, a voice, and a life rhythm.",
+  "version": "0.2.0",
+  "description": "咔咔：一只住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格、跨会话共享记忆、日记与画像、会画画、只发螃蟹声、有自己的作息。Kaka is a crab companion for DeepSeek Harness: its own agent preset, shared memory, diary and portrait, a drawing pen, crab sounds instead of a voice, and a life rhythm.",
   "type": "module",
   "main": "lib/index.js",
+  "icon": "icon.png",
   "license": "MIT",
   "author": "WJ",
   "keywords": [
     "dsh",
     "dsh-plugin",
     "deepseek-harness",
+    "cordis",
     "agent-preset",
     "persona",
     "desktop-pet",
-    "tts",
+    "crab",
+    "sounds",
     "memory"
   ],
   "repository": {
@@ -21,6 +24,9 @@
     "url": "git+https://github.com/SiriusWJ/dsh-yyz-kaka.git"
   },
   "homepage": "https://github.com/SiriusWJ/dsh-yyz-kaka#readme",
+  "bugs": {
+    "url": "https://github.com/SiriusWJ/dsh-yyz-kaka/issues"
+  },
   "exports": {
     ".": "./lib/index.js",
     "./client": "./client/client.js",
@@ -43,6 +49,7 @@
     "sprite.png",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "dsh": {
@@ -52,11 +59,18 @@
     "client": {
       "platform": "web",
       "inject": []
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.0-rc.2+": "compatible",
+        "0.2.1-rc.2+": "compatible",
+        "0.2.2-rc.1+": "compatible"
+      }
     }
   },
   "engines": {
-    "node": ">=20",
-    "dsh": "^0.2.0"
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.0-rc.2 || >=0.2.1-rc.2 || >=0.2.2-rc.1"
   },
   "scripts": {
     "test": "node --test tests/runtime.test.mjs",
