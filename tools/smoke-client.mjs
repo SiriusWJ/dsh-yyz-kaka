@@ -209,10 +209,14 @@ if (!Array.isArray(exported.inject) || !exported.inject.includes('slots')) throw
 
 exported.apply(ctx)
 
+// 视图是「按当前会话预设」动态登记的，测试里显式触发一次
+if (typeof exported.__test.registerView === 'function') exported.__test.registerView()
+
 const petSlot = registrations.find(item => item.options.name === 'conversation.input.overlay')
 const settingsSlot = registrations.find(item => item.options.name === 'settings.plugins.tab')
 const viewSlot = registrations.find(item => item.options.name === 'conversation.view')
-if (!petSlot || !settingsSlot || !viewSlot) throw new Error('缺少宠物 / 设置 tab / 对话视图槽位')
+const gateSlot = registrations.find(item => item.options.name === 'shell.overlay')
+if (!petSlot || !settingsSlot || !viewSlot || !gateSlot) throw new Error('缺少宠物 / 设置 tab / 对话视图 / 视图守门槽位')
 if (petSlot.options.id !== 'dsh-yyz-kaka-pet') throw new Error(`宠物槽位 id 变了：${petSlot.options.id}`)
 if (settingsSlot.options.id !== 'kaka') throw new Error(`设置 tab id 变了：${settingsSlot.options.id}`)
 if (viewSlot.options.id !== 'kaka') throw new Error(`对话视图 id 变了：${viewSlot.options.id}`)

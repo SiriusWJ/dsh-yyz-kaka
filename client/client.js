@@ -1056,6 +1056,9 @@ window.__ModuleLoader__.load({
     /** 咔咔页签打开时置位：宠物要立刻让位，不必等轮询。 */
     var kakaTabOpen = false
 
+    /** apply 里装配的视图登记器（同时供渲染测试调用）。 */
+    var kakaViewRegistrar = null
+
     var VIEW_CSS = [
       '.dsc-kaka-view{display:flex;flex-direction:column;gap:14px;height:100%;width:100%;box-sizing:border-box;padding:20px 24px 8px;color:var(--dsw-alias-label-primary)}',
       '.dsc-kaka-view-head{display:flex;align-items:center;gap:12px}',
@@ -1142,6 +1145,14 @@ window.__ModuleLoader__.load({
     /** 对话区里的「咔咔」页签：日记 / 梦 / 记忆。 */
     function KakaView(props) {
       var t = props.t
+      // 双保险：页签由守门组件按预设动态登记，这里再看一眼预设，免得回收延迟时露出空白页
+      var preset = typeof props.useSessions === 'function' && props.sessionId
+        ? props.useSessions(function (snapshot) {
+          return snapshot && snapshot.byId && snapshot.byId[props.sessionId]
+            ? (snapshot.byId[props.sessionId].projectionValues && snapshot.byId[props.sessionId].projectionValues.agentPreset)
+            : undefined
+        })
+        : undefined
       // initialView 是渲染测试的注入口；真实运行全靠下面的 effect 拉取
       var seed = props.initialView || {}
       var [part, setPart] = useState(seed.part || 'diary')
@@ -1274,6 +1285,8 @@ window.__ModuleLoader__.load({
         }))
       }
 
+      if (preset !== undefined && preset !== PRESET_ID) return null
+
       var selectedDay = part === 'memory' ? '' : (day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || '')
 
       return h('div', { className: 'dsc-kaka-view' },
@@ -1336,15 +1349,66 @@ window.__ModuleLoader__.load({
         }, function KakaPetSlot(props) { return h(PetBoundary, null, h(KakaPet, props)) })
       })
 
-      // 对话页签：只在咔咔会话里出现的「咔咔」视图（日记 / 梦 / 记忆）
-      ctx.slots.inject('conversation.view', function () {
+      // 对话页签：因为槽位没有"按会话条件注册"的选项，这里用一个小守门组件
+      // 盯着"当前会话的预设"：是咔咔就登记这个视图，不是就注销。
+      // 注销后页签本身会从对话头部消失，而不是留一个点进去空白的标签。
+      function registerKakaView() {
+        return ctx.slots.inject('conversation.view', function () {
+          return ctx.slots.register({
+            name: 'conversation.view',
+            id: 'kaka',
+            order: 5,
+            label: function () { return t('view.title') },
+            inject: function () { return { t: t } },
+          }, function KakaViewSlot(props) { return h(PetBoundary, null, h(KakaView, props)) })
+        })
+      }
+
+      kakaViewRegistrar = registerKakaView
+
+      function KakaViewGate(props) {
+        var useSessions = props.useSessions
+        var current = typeof useSessions === 'function'
+          ? useSessions(function (snapshot) { return snapshot && snapshot.current })
+          : undefined
+        var preset = typeof useSessions === 'function'
+          ? useSessions(function (snapshot) {
+            return current && snapshot && snapshot.byId && snapshot.byId[current]
+              ? (snapshot.byId[current].projectionValues && snapshot.byId[current].projectionValues.agentPreset)
+              : undefined
+          })
+          : undefined
+        var disposeRef = useRef(null)
+
+        useEffect(function () {
+          var shouldShow = preset === PRESET_ID
+          if (shouldShow && !disposeRef.current) {
+            disposeRef.current = registerKakaView()
+          } else if (!shouldShow && disposeRef.current) {
+            try { disposeRef.current() } catch (err) { /* ignore */ }
+            disposeRef.current = null
+          }
+          return undefined
+        }, [preset])
+
+        useEffect(function () {
+          return function () {
+            if (disposeRef.current) {
+              try { disposeRef.current() } catch (err) { /* ignore */ }
+              disposeRef.current = null
+            }
+          }
+        }, [])
+
+        return null
+      }
+
+      ctx.slots.inject('shell.overlay', function () {
         return ctx.slots.register({
-          name: 'conversation.view',
-          id: 'kaka',
+          name: 'shell.overlay',
+          id: PLUGIN_ID + '-view-gate',
           order: 5,
-          label: function () { return t('view.title') },
-          inject: function () { return { t: t } },
-        }, function KakaViewSlot(props) { return h(PetBoundary, null, h(KakaView, props)) })
+        }, function KakaViewGateSlot(props) { return h(PetBoundary, null, h(KakaViewGate, props)) })
       })
 
       // 设置页：放在「插件」设置里的一个 tab
@@ -1363,7 +1427,13 @@ window.__ModuleLoader__.load({
     exports.inject = ['slots']
     exports.apply = apply
     // 给渲染测试用的纯函数（不参与真实运行）
-    exports.__test = { splitProse: splitProse, parseMemory: parseMemory, formatDayTitle: formatDayTitle, weekdayOf: weekdayOf }
+    exports.__test = {
+      splitProse: splitProse,
+      parseMemory: parseMemory,
+      formatDayTitle: formatDayTitle,
+      weekdayOf: weekdayOf,
+      registerView: function () { return kakaViewRegistrar ? kakaViewRegistrar() : undefined },
+    }
     return module.exports
   },
 })
