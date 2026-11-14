@@ -31,9 +31,11 @@ function makeCtx() {
 
 const memory = await import(root + 'preset/kaka-memory.mjs')
 const voice = await import(root + 'preset/kaka-voice.mjs')
+const draw = await import(root + 'preset/kaka-draw.mjs')
 
 await memory.apply(makeCtx())
 await voice.apply(makeCtx())
+await draw.apply(makeCtx())
 
 console.log('sections:', sections.map(s => `${s.name}@${s.order}`).join(', '))
 console.log('variables:', variables.join(', '))
