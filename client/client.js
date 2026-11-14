@@ -509,12 +509,29 @@ window.__ModuleLoader__.load({
       }
 
       componentDidCatch(error) {
-        try { console.warn('[kaka] 渲染失败，已降级为空白：', error) } catch (err) { /* ignore */ }
+        this.error = error
+        try { console.warn('[kaka] 渲染失败：', error) } catch (err) { /* ignore */ }
       }
 
       render() {
-        if (this.state.failed) return null
-        return this.props.children || null
+        if (!this.state.failed) return this.props.children || null
+        // 不再静默变空白：把错误摊开，主人一眼就能看见是哪坏了
+        var message = this.error && (this.error.message || String(this.error))
+        return h('div', {
+          style: {
+            margin: '16px 4px',
+            padding: '12px 14px',
+            borderRadius: 10,
+            border: '1px solid var(--dsw-alias-state-error-primary, #c0392b)',
+            background: 'var(--dsw-alias-bg-layer-2, transparent)',
+            color: 'var(--dsw-alias-label-primary, inherit)',
+            fontSize: 12,
+            lineHeight: '18px',
+          },
+        },
+        h('div', { style: { fontWeight: 600, marginBottom: 6 } }, '咔咔这块没画出来'),
+        h('div', { style: { opacity: .8, wordBreak: 'break-word' } }, message || '未知错误'),
+        h('div', { style: { opacity: .65, marginTop: 6 } }, '刷新页面试试；还不行就把这段发给我'))
       }
     }
 
