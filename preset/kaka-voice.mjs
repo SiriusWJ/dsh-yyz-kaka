@@ -22,6 +22,18 @@ export const inject = ['tools', 'systemPrompt']
 
 const MOODS = ['idle', 'focus', 'proud', 'worried', 'tired', 'dreaming', 'petted', 'sleeping', 'drawing']
 const BEEP_KINDS = ['done', 'question', 'error', 'attention', 'pet']
+const SFX_NAMES = ['clack', 'clack2', 'knock', 'bubble', 'scuttle', 'chirp']
+
+/** 情绪 → 音色与速度：让她"有情绪地叫"。 */
+const EMOTION_SFX = {
+  happy: { name: 'clack2', pitch: 1.15, speed: 1.2 },
+  excited: { name: 'clack2', pitch: 1.32, speed: 1.5 },
+  annoyed: { name: 'knock', pitch: 0.96, speed: 1.15 },
+  tired: { name: 'knock', pitch: 0.78, speed: 0.7 },
+  curious: { name: 'chirp', pitch: 1.1, speed: 1 },
+  scared: { name: 'chirp', pitch: 1.4, speed: 1.45 },
+  calm: { name: 'bubble', pitch: 1, speed: 0.9 },
+}
 
 /** 解析闹钟时间：支持 "HH:mm"、"YYYY-MM-DD HH:mm"、ISO 字符串、或"多少分钟后"。 */
 function resolveReminderTime(args) {
@@ -58,32 +70,66 @@ export async function apply(ctx) {
   })
 
   // ── 2. kaka_beep ─────────────────────────────────────────────────
+  // ── 1. kaka_beep：发出螃蟹的声音（可选情绪预设，也能自己调音） ──
   ctx.tools.register(defineTool({
     name: 'kaka_beep',
-    description: '播放一个提示音（不联网、不花钱）。用于抓住主人的注意力，只响一声。',
+    description: '发出螃蟹的声音（咔嚓/叩壳/咕噜/沙沙爬/吱吱）。可以选情绪预设，也可以自己调音高与速度，做出属于你的叫法。',
     parameters: {
       kind: {
         type: 'string',
         enum: BEEP_KINDS,
-        description: 'done 完成 · question 需要主人回答 · error 出错 · attention 提醒 · pet 被摸。默认 done。',
+        description: '事件档位：done=干完活、attention=叫主人、question=问一句、error=出错、pet=被摸。不填默认 done。',
       },
+      sound: {
+        type: 'string',
+        enum: SFX_NAMES,
+        description: '直接指定螃蟹声：clack=咔嚓、clack2=咔嚓咔嚓、knock=叩壳、bubble=咕噜、scuttle=沙沙爬、chirp=吱吱。',
+      },
+      emotion: {
+        type: 'string',
+        enum: Object.keys(EMOTION_SFX),
+        description: '情绪预设（会覆盖 sound 的音色与速度）：happy 开心、excited 兴奋、annoyed 不满、tired 累、curious 好奇、scared 受惊、calm 平静。',
+      },
+      pitch: { type: 'number', description: '音高倍数 0.5～2（<1 更闷，>1 更尖）' },
+      speed: { type: 'number', description: '速度倍数 0.5～2（<1 更慢）' },
+      volume: { type: 'number', description: '音量 0～1，默认 1' },
     },
     output: {
       schema: {
         type: 'object',
         additionalProperties: false,
-        properties: { sound: { type: 'string', required: true } },
+        properties: {
+          sound: { type: 'string', required: true },
+          pitch: { type: 'number', required: true },
+          speed: { type: 'number', required: true },
+          volume: { type: 'number', required: true },
+        },
       },
-      render: (_args, value) => [{ type: 'text', text: `响了提示音 ${value.sound}。` }],
+      render: (_args, value) => [{
+        type: 'text',
+        text: `叫了一声：${value.sound}（音高 ×${value.pitch}，速度 ×${value.speed}）`,
+      }],
     },
     execute(args, exec) {
-      const result = beep(args.kind || 'done', exec.agent?.id)
-      return Promise.resolve({ sound: result.sound })
+      const chosen = args.emotion && EMOTION_SFX[args.emotion]
+      const sound = args.sound || (chosen && chosen.name) || ''
+      const options = {
+        name: sound || undefined,
+        pitch: Number(args.pitch) || (chosen && chosen.pitch) || 1,
+        speed: Number(args.speed) || (chosen && chosen.speed) || 1,
+        volume: Number(args.volume) || 1,
+      }
+      const result = beep(args.kind || 'done', exec?.agent?.id || '', options)
+      log('叫了一声', options.name || result.sound, 'pitch', options.pitch, 'speed', options.speed)
+      return {
+        sound: options.name || result.sound,
+        pitch: options.pitch,
+        speed: options.speed,
+        volume: options.volume,
+      }
     },
-    presentCall: args => ({ card: 'generic', title: `提示音 ${args.kind || 'done'}`, kind: 'other' }),
+    presentCall: () => ({ card: 'generic', title: '叫一声', kind: 'other' }),
   }))
-
-  // ── 3. kaka_mood ─────────────────────────────────────────────────
   ctx.tools.register(defineTool({
     name: 'kaka_mood',
     description: '切换你此刻的心情与动作，让主人从宠物动画上看出你的状态。可以顺带说一句话。',

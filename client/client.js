@@ -374,14 +374,27 @@ window.__ModuleLoader__.load({
       return audioCtx
     }
 
-    /** 螃蟹声：全是"物理声"——钳子咔、壳上叩、气泡、沙沙爬，没有一句人话。 */
+    /**
+     * 螃蟹声引擎：全是"物理声"——钳子咔、壳上叩、气泡、沙沙爬，没有一句人话。
+     * 每个声音都接受 opts：{ pitch, speed, volume }，所以她能自己"调音"。
+     */
     var SFX = {
-      clack: { label: '咔嚓', play: (ctx, at, vol) => clack(ctx, at, vol, 2) },
-      clack2: { label: '咔嚓咔嚓', play: (ctx, at, vol) => clack(ctx, at, vol, 4) },
-      knock: { label: '叩壳', play: (ctx, at, vol) => knock(ctx, at, vol) },
-      bubble: { label: '咕噜', play: (ctx, at, vol) => bubble(ctx, at, vol) },
-      scuttle: { label: '沙沙爬', play: (ctx, at, vol) => scuttle(ctx, at, vol) },
-      chirp: { label: '吱吱', play: (ctx, at, vol) => chirp(ctx, at, vol) },
+      clack: { label: '咔嚓', play: (ctx, at, vol, o) => clack(ctx, at, vol, 2, o) },
+      clack2: { label: '咔嚓咔嚓', play: (ctx, at, vol, o) => clack(ctx, at, vol, 4, o) },
+      knock: { label: '叩壳', play: (ctx, at, vol, o) => knock(ctx, at, vol, o) },
+      bubble: { label: '咕噜', play: (ctx, at, vol, o) => bubble(ctx, at, vol, o) },
+      scuttle: { label: '沙沙爬', play: (ctx, at, vol, o) => scuttle(ctx, at, vol, o) },
+      chirp: { label: '吱吱', play: (ctx, at, vol, o) => chirp(ctx, at, vol, o) },
+    }
+
+    /** 声音参数归一化：音高 0.5～2、速度 0.5～2、音量 0～1。 */
+    function sfxOptions(raw) {
+      var opts = raw || {}
+      return {
+        pitch: Math.max(0.5, Math.min(2, Number(opts.pitch) || 1)),
+        speed: Math.max(0.5, Math.min(2, Number(opts.speed) || 1)),
+        volume: Math.max(0.05, Math.min(1, Number(opts.volume) || 1)),
+      }
     }
 
     /** 短噪声缓冲（钳子、沙子这类声音的底子）。 */
@@ -394,113 +407,113 @@ window.__ModuleLoader__.load({
     }
 
     /** 一下钳子："咔"。 */
-    function oneClack(ctx, at, vol, centerHz) {
+    function oneClack(ctx, at, vol, centerHz, o) {
       var src = ctx.createBufferSource()
       src.buffer = noiseBuffer(ctx, 0.06)
       var band = ctx.createBiquadFilter()
       band.type = 'bandpass'
-      band.frequency.value = centerHz
+      band.frequency.value = centerHz * o.pitch
       band.Q.value = 2.4
       var gain = ctx.createGain()
       gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(vol, at + 0.004)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.055)
+      gain.gain.exponentialRampToValueAtTime(vol, at + 0.004 / o.speed)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.055 / o.speed)
       src.connect(band).connect(gain).connect(ctx.destination)
       src.start(at)
-      src.stop(at + 0.07)
+      src.stop(at + 0.07 / o.speed)
     }
 
     /** 连夹几下：咔嚓／咔嚓咔嚓。 */
-    function clack(ctx, at, vol, times) {
+    function clack(ctx, at, vol, times, o) {
       for (var i = 0; i < times; i += 1) {
-        oneClack(ctx, at + i * 0.075, vol * (i === 0 ? 1 : 0.8), 2100 + Math.random() * 900)
+        oneClack(ctx, at + (i * 0.075) / o.speed, vol * (i === 0 ? 1 : 0.8), 2100 + Math.random() * 900, o)
       }
     }
 
     /** 叩壳：低频一记闷响 + 一点壳的杂音。 */
-    function knock(ctx, at, vol) {
+    function knock(ctx, at, vol, o) {
       var osc = ctx.createOscillator()
       osc.type = 'sine'
-      osc.frequency.setValueAtTime(150, at)
-      osc.frequency.exponentialRampToValueAtTime(70, at + 0.14)
+      osc.frequency.setValueAtTime(150 * o.pitch, at)
+      osc.frequency.exponentialRampToValueAtTime(70 * o.pitch, at + 0.14 / o.speed)
       var gain = ctx.createGain()
       gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(vol, at + 0.006)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.16)
+      gain.gain.exponentialRampToValueAtTime(vol, at + 0.006 / o.speed)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.16 / o.speed)
       osc.connect(gain).connect(ctx.destination)
       osc.start(at)
-      osc.stop(at + 0.18)
-      oneClack(ctx, at, vol * 0.5, 900)
+      osc.stop(at + 0.18 / o.speed)
+      oneClack(ctx, at, vol * 0.5, 900, o)
     }
 
     /** 咕噜：气泡从水里冒出来。 */
-    function bubble(ctx, at, vol) {
+    function bubble(ctx, at, vol, o) {
       var osc = ctx.createOscillator()
       osc.type = 'sine'
-      osc.frequency.setValueAtTime(260, at)
-      osc.frequency.exponentialRampToValueAtTime(760, at + 0.16)
+      osc.frequency.setValueAtTime(260 * o.pitch, at)
+      osc.frequency.exponentialRampToValueAtTime(760 * o.pitch, at + 0.16 / o.speed)
       var gain = ctx.createGain()
       gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(vol * 0.9, at + 0.03)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.2)
+      gain.gain.exponentialRampToValueAtTime(vol * 0.9, at + 0.03 / o.speed)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.2 / o.speed)
       osc.connect(gain).connect(ctx.destination)
       osc.start(at)
-      osc.stop(at + 0.22)
+      osc.stop(at + 0.22 / o.speed)
     }
 
     /** 沙沙爬：一段带节奏的沙粒噪声。 */
-    function scuttle(ctx, at, vol) {
+    function scuttle(ctx, at, vol, o) {
       var src = ctx.createBufferSource()
       src.buffer = noiseBuffer(ctx, 0.34)
       var band = ctx.createBiquadFilter()
       band.type = 'bandpass'
-      band.frequency.value = 1300
+      band.frequency.value = 1300 * o.pitch
       band.Q.value = 1.1
       var gain = ctx.createGain()
       gain.gain.setValueAtTime(vol * 0.7, at)
       for (var i = 0; i < 6; i += 1) {
-        var t = at + i * 0.055
+        var t = at + (i * 0.055) / o.speed
         gain.gain.setValueAtTime(vol * 0.85, t)
-        gain.gain.exponentialRampToValueAtTime(vol * 0.25, t + 0.04)
+        gain.gain.exponentialRampToValueAtTime(vol * 0.25, t + 0.04 / o.speed)
       }
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34 / o.speed)
       src.connect(band).connect(gain).connect(ctx.destination)
       src.start(at)
-      src.stop(at + 0.36)
+      src.stop(at + 0.36 / o.speed)
     }
 
     /** 吱吱：螃蟹被拎起来那种短促摩擦声。 */
-    function chirp(ctx, at, vol) {
+    function chirp(ctx, at, vol, o) {
       var osc = ctx.createOscillator()
       osc.type = 'sawtooth'
-      osc.frequency.setValueAtTime(1500, at)
-      osc.frequency.exponentialRampToValueAtTime(950, at + 0.07)
+      osc.frequency.setValueAtTime(1500 * o.pitch, at)
+      osc.frequency.exponentialRampToValueAtTime(950 * o.pitch, at + 0.07 / o.speed)
       var band = ctx.createBiquadFilter()
       band.type = 'bandpass'
-      band.frequency.value = 1600
+      band.frequency.value = 1600 * o.pitch
       band.Q.value = 3
       var gain = ctx.createGain()
       gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(vol * 0.6, at + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09)
+      gain.gain.exponentialRampToValueAtTime(vol * 0.6, at + 0.01 / o.speed)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09 / o.speed)
       osc.connect(band).connect(gain).connect(ctx.destination)
       osc.start(at)
-      osc.stop(at + 0.1)
+      osc.stop(at + 0.1 / o.speed)
     }
 
     /** 音量：设置页写，播放时读。 */
     var sfxVolume = 0.6
 
-    /** 播放一个螃蟹声。 */
-    function playSfx(name) {
+    /** 播放一个螃蟹声（opts 支持音高/速度/音量）。 */
+    function playSfx(name, rawOpts) {
       var ctx = ensureAudioCtx()
       if (!ctx) return
       if (ctx.state === 'suspended') ctx.resume().catch(function () {})
       var entry = SFX[name] || SFX.clack
-      var vol = Math.max(0.05, Math.min(1, Number(sfxVolume) || 0.6)) * 0.45
-      try { entry.play(ctx, ctx.currentTime + 0.01, vol) } catch (err) { /* ignore */ }
+      var o = sfxOptions(rawOpts)
+      var vol = Math.max(0.05, Math.min(1, Number(sfxVolume) || 0.6)) * 0.45 * o.volume
+      try { entry.play(ctx, ctx.currentTime + 0.01, vol, o) } catch (err) { /* ignore */ }
     }
-
     /** 宿主 beep 事件 → 螃蟹声。 */
     var BEEP_TO_SFX = {
       done: 'clack2',
@@ -770,7 +783,7 @@ window.__ModuleLoader__.load({
             // 带会话的条目只归那个会话所有：多标签/多会话时不串音
             if (item.session && item.session !== sessionRef.current) continue
             if (item.kind === 'say') { /* 说话功能已移除，忽略历史语音条目 */ }
-            else if (item.kind === 'beep') playSfx(BEEP_TO_SFX[item.sound] || 'clack')
+            else if (item.kind === 'beep') playSfx(item.sfx && item.sfx.name ? item.sfx.name : (BEEP_TO_SFX[item.sound] || 'clack'), item.sfx || null)
             else if (item.kind === 'mood') {
               setMood(item.mood || 'idle')
               if (item.mood === 'proud') showBubble(t('pet.proud'))
@@ -1021,13 +1034,16 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-sub{font-size:12px;color:var(--dsw-alias-label-secondary)}',
       '.dsc-kaka-group{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1);overflow:hidden}',
       '.dsc-kaka-group-title{padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2)}',
-      '.dsc-kaka-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border-top:1px solid var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border-top:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}',
+'.dsc-kaka-rowtext{flex:1 1 160px;min-width:150px}',
+'.dsc-kaka-row.is-wide{align-items:flex-start;gap:10px}',
+'.dsc-kaka-row.is-wide .dsc-kaka-control{flex:1 1 100%;}',
       '.dsc-kaka-row:first-of-type{border-top:none}',
       '.dsc-kaka-label{font-size:13px;color:var(--dsw-alias-label-primary)}',
       '.dsc-kaka-desc{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-secondary);margin-top:2px;max-width:420px}',
       '.dsc-kaka-control{display:flex;align-items:center;gap:8px;flex-shrink:0}',
       // 开关：关闭态用灰轨道（原来的 state-idle-primary 在这套主题里接近白色，白钮看不见）
-      '.dsc-kaka-sfx{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}',
+      '.dsc-kaka-sfx{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start}',
       '.dsc-kaka-switch{position:relative;flex-shrink:0;width:38px;height:22px;border-radius:999px;border:none;cursor:pointer;padding:0;background:color-mix(in srgb, var(--dsw-alias-label-secondary) 34%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-secondary) 28%, transparent);transition:background .16s, box-shadow .16s}',
       '.dsc-kaka-switch:hover{background:color-mix(in srgb, var(--dsw-alias-label-secondary) 46%, transparent)}',
       '.dsc-kaka-switch[data-on="true"]{background:var(--dsw-alias-brand-primary);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-brand-primary) 80%, #000 20%)}',
@@ -1071,8 +1087,8 @@ window.__ModuleLoader__.load({
     }
 
     function Row(props) {
-      return h('div', { className: 'dsc-kaka-row' },
-        h('div', null,
+      return h('div', { className: 'dsc-kaka-row' + (props.wide ? ' is-wide' : '') },
+        h('div', { className: 'dsc-kaka-rowtext' },
           h('div', { className: 'dsc-kaka-label' }, props.label),
           props.desc ? h('div', { className: 'dsc-kaka-desc' }, props.desc) : null),
         h('div', { className: 'dsc-kaka-control' }, props.children))
@@ -1219,7 +1235,7 @@ window.__ModuleLoader__.load({
                 patch('voice', 'volume', Number(event.target.value))
               },
             })),
-          h(Row, { label: t('row.sfxTest'), desc: t('row.sfxTest.desc') },
+          h(Row, { wide: true, label: t('row.sfxTest'), desc: t('row.sfxTest.desc') },
             h('div', { className: 'dsc-kaka-sfx' },
               Object.keys(SFX).map(function (name) {
                 return h('button', {
