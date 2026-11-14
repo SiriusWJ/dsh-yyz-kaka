@@ -39,6 +39,16 @@
 
 在 dsh-market 里搜索 `dsh-yyz-kaka` 或 `咔咔`；也可以直接填本地目录（见下）。
 
+## 界面预览
+
+| 小本子面板 | 主人画像页 |
+|---|---|
+| ![小本子面板](docs/kaka-panel.png) | ![画像页](docs/kaka-portrait.png) |
+
+| 画画状态（右钳握笔） | 声音设置（6 种螃蟹声） |
+|---|---|
+| ![画画状态](docs/kaka-drawing.png) | ![声音设置](docs/kaka-sounds.png) |
+
 ## 安装
 
 ```powershell
