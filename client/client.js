@@ -324,6 +324,7 @@ window.__ModuleLoader__.load({
       '@keyframes dsc-kaka-sleep{0%,100%{transform:translateY(2px) scale(0.98)}50%{transform:translateY(5px) scale(0.95)}}',
       '@keyframes dsc-kaka-squish{0%{transform:scale(1,1)}40%{transform:scale(1.1,0.88)}100%{transform:scale(1,1)}}',
       '@keyframes dsc-kaka-bubble{0%{opacity:0;transform:translateY(4px) scale(.96)}12%{opacity:1;transform:translateY(0) scale(1)}88%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}',
+      '@media (prefers-reduced-motion: reduce){[data-kaka-pet] img{animation:none !important}[data-kaka-pet] *{transition:none !important}}',
     ].join('')
 
     /** 宠物本体：一张精灵图 + CSS 动效，零外部依赖。 */
@@ -352,6 +353,32 @@ window.__ModuleLoader__.load({
       })
     }
 
+    /**
+     * 渲染兜底：插件组件抛错时只让这一个槽位空着，绝不把宿主界面搞白。
+     * （官方说明：slot entry 抛错会被整块替换成空白，所以兜底必须在插件里做。）
+     * 注意必须用真正的 class —— React.Component 是 ES6 class，
+     * `React.Component.call(this, props)` 会直接抛 TypeError。
+     */
+    class PetBoundary extends React.Component {
+      constructor(props) {
+        super(props)
+        this.state = { failed: false }
+      }
+
+      static getDerivedStateFromError() {
+        return { failed: true }
+      }
+
+      componentDidCatch(error) {
+        try { console.warn('[kaka] 渲染失败，已降级为空白：', error) } catch (err) { /* ignore */ }
+      }
+
+      render() {
+        if (this.state.failed) return null
+        return this.props.children || null
+      }
+    }
+
     /** 输入框旁的宠物。只在咔咔会话渲染；点击 = 摸她。 */
     function KakaPet(props) {
       var sessionId = props.sessionId
@@ -371,8 +398,10 @@ window.__ModuleLoader__.load({
       var [rect, setRect] = useState(null)
       var [mood, setMood] = useState('idle')
       var [bubble, setBubble] = useState('')
-      var [settings, setSettings] = useState(null)
+      // initialSettings 只是给渲染测试用的注入口，真实运行时由 /kaka/profile 拉取
+      var [settings, setSettings] = useState(props.initialSettings || null)
       var [busy, setBusy] = useState(false)
+      var [hover, setHover] = useState(false)
       var cursorRef = useRef(0)
       var bubbleTimer = useRef(null)
       var pokeTimer = useRef(null)
@@ -553,6 +582,10 @@ window.__ModuleLoader__.load({
         title: busy ? t('pet.busyTip') : t('pet.pokeTip'),
         'aria-label': t('pet.name'),
         onClick: onPoke,
+        onMouseEnter: function () { setHover(true) },
+        onMouseLeave: function () { setHover(false) },
+        onFocus: function () { setHover(true) },
+        onBlur: function () { setHover(false) },
         onKeyDown: function (event) {
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onPoke() }
         },
@@ -562,8 +595,11 @@ window.__ModuleLoader__.load({
           cursor: 'pointer',
           position: 'relative',
           pointerEvents: 'auto',
-          transition: 'transform .18s ease',
-          filter: 'drop-shadow(0 6px 10px rgba(0,0,0,.22))',
+          transition: 'transform .18s cubic-bezier(.2,.8,.3,1), filter .18s ease',
+          transform: hover ? 'translateY(-3px) scale(1.06)' : 'translateY(0) scale(1)',
+          filter: hover
+            ? 'drop-shadow(0 10px 16px rgba(0,0,0,.28))'
+            : 'drop-shadow(0 6px 10px rgba(0,0,0,.22))',
         },
       },
       h(PetSprite, { mood: mood, size: size }),
@@ -921,7 +957,7 @@ window.__ModuleLoader__.load({
           id: PLUGIN_ID + '-pet',
           order: 5,
           inject: function () { return { t: t } },
-        }, KakaPet)
+        }, function KakaPetSlot(props) { return h(PetBoundary, null, h(KakaPet, props)) })
       })
 
       // 设置页：独立的「咔咔」栏
@@ -932,7 +968,7 @@ window.__ModuleLoader__.load({
           order: 25,
           label: function () { return t('settings.title') },
           inject: function () { return { t: t, openSession: openSessionById } },
-        }, KakaSettings)
+        }, function KakaSettingsSlot(props) { return h(PetBoundary, null, h(KakaSettings, props)) })
       })
     }
 

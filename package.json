@@ -59,10 +59,12 @@
   },
   "scripts": {
     "test": "node --test tests/runtime.test.mjs",
-    "smoke": "node --input-type=module tools/smoke-presets.mjs",
+    "smoke": "node tools/smoke-client.mjs && node --input-type=module tools/smoke-presets.mjs",
     "sprite": "python tools/make-sprite.py",
     "preview": "python tools/make-preview.py",
-    "check": "node --check lib/index.js && node --check lib/runtime.js && node --check lib/dsh-modules.js && node --check preset/kaka-memory.mjs && node --check preset/kaka-voice.mjs && node --check client/client.js"
+    "check": "node --check lib/index.js && node --check lib/runtime.js && node --check lib/dsh-modules.js && node --check preset/kaka-memory.mjs && node --check preset/kaka-voice.mjs && node --check client/client.js",
+    "smoke:client": "node tools/smoke-client.mjs",
+    "smoke:presets": "node --input-type=module tools/smoke-presets.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-tools": "*"

@@ -85,7 +85,8 @@ settings.json        设置面板写入的配置
 ```powershell
 npm run check      # 六个模块语法自检
 npm test           # 运行时单测（13 条）
-npm run smoke      # 预设插件冒烟（需要 DSH 的 Electron 运行时）
+npm run smoke:client   # 客户端 bundle：注册 + 迷你渲染 + 分支断言
+npm run smoke:presets  # 预设插件冒烟（需要 DSH 的 Electron 运行时）
 npm run sprite     # 重新生成宠物精灵图
 npm run preview    # 重新生成详情页预览图
 ```
