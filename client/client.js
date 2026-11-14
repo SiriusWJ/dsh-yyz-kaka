@@ -88,6 +88,8 @@ window.__ModuleLoader__.load({
         'row.homeSession': '咔咔的家',
         'row.homeSession.desc': '日记与梦投递到这里；第一次需要时会自动创建。',
         'action.openHome': '去她家看看',
+        'action.selftest': '自检一下',
+        'common.diagLoading': '检查中…',
         'action.forceDream': '立刻做个梦',
         'action.ramble': '让她冒个泡',
         'action.test': '试听',
@@ -158,6 +160,8 @@ window.__ModuleLoader__.load({
         'row.homeSession': "Kaka's home",
         'row.homeSession.desc': 'Diary and dreams are delivered here; created on demand.',
         'action.openHome': 'Open her home',
+        'action.selftest': 'Self-test',
+        'common.diagLoading': 'Checking…',
         'action.forceDream': 'Dream now',
         'action.ramble': 'Say something',
         'action.test': 'Test',
@@ -705,12 +709,32 @@ window.__ModuleLoader__.load({
 
     function KakaSettings(props) {
       var t = props.t
-      var [settings, setSettings] = useState(null)
+      // initialSettings 是渲染测试用的注入口；真实运行由 /kaka/profile 拉取
+      var [settings, setSettings] = useState(props.initialSettings || null)
       var [meta, setMeta] = useState(null)
       var [savedAt, setSavedAt] = useState(0)
       var [error, setError] = useState('')
       var [confirm, setConfirm] = useState('')
+      var [diag, setDiag] = useState('')
       var saveTimer = useRef(null)
+
+      /** 自检：把 /kaka/selftest 的结果压成一行人话。 */
+      var runSelftest = useCallback(function () {
+        setDiag(t('common.diagLoading'))
+        getJson(API + '/selftest')
+          .then(function (payload) {
+            var checks = payload && payload.checks
+            if (!checks) { setDiag(t('common.error')); return }
+            var parts = []
+            parts.push(t('row.dataDir') + ':' + (checks.dataDir && checks.dataDir.writable ? 'OK' : 'FAIL'))
+            parts.push('memory:' + (checks.memory && checks.memory.agent ? 'OK' : 'FAIL'))
+            parts.push('home:' + (checks.home && checks.home.exists ? 'OK' : 'FAIL'))
+            parts.push('voice:' + (checks.voice && checks.voice.available ? 'OK' : 'off'))
+            parts.push('tick:' + (checks.tick && checks.tick.lastTickAgoMs != null ? Math.round(checks.tick.lastTickAgoMs / 1000) + 's' : '?'))
+            setDiag(parts.join(' · '))
+          })
+          .catch(function (err) { setDiag(String(err && err.message || err)) })
+      }, [setDiag, t])
 
       useEffect(function () {
         getJson(API + '/profile')
@@ -905,15 +929,20 @@ window.__ModuleLoader__.load({
                   .catch(function (err) { setError(String(err && err.message || err)) })
               },
             }, t('action.openHome'))),
-          h(Row, { label: t('action.forceDream') },
+          h(Row, { label: t('action.selftest'), desc: diag || t('row.homeSession.desc') },
             h('button', {
               type: 'button', className: 'dsc-kaka-btn',
-              onClick: function () { postJson(API + '/life/force', { kind: 'dream' }).catch(function () {}) },
-            }, t('action.forceDream')),
+              onClick: runSelftest,
+            }, t('action.selftest')),
             h('button', {
               type: 'button', className: 'dsc-kaka-btn',
               onClick: function () { postJson(API + '/life/force', { kind: 'ramble' }).catch(function () {}) },
             }, t('action.ramble'))),
+          h(Row, { label: t('action.forceDream') },
+            h('button', {
+              type: 'button', className: 'dsc-kaka-btn',
+              onClick: function () { postJson(API + '/life/force', { kind: 'dream' }).catch(function () {}) },
+            }, t('action.forceDream'))),
           h(Row, { label: t('action.clearMemory') },
             h('button', {
               type: 'button', className: 'dsc-kaka-btn',

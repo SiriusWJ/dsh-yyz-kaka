@@ -130,6 +130,55 @@ test('作息窗口：解析与判定', () => {
   assert.equal(runtime.inQuietWindow(at(8)), false)
 })
 
+test('quietDue：窗口外 / 已写过 / 静默足够 / 仍在活动', () => {
+  const at = hour => {
+    const d = new Date()
+    d.setHours(hour, 0, 0, 0)
+    return d
+  }
+  runtime.patchSettings({
+    life: { enabled: true, diary: true, windowStart: '00:00', windowEnd: '08:00', idleHours: 3 },
+  })
+  const state = runtime.getState()
+
+  // 窗口外
+  assert.equal(runtime.quietDue(at(12)).reason, 'outside-window')
+
+  // 今天已经写过
+  state.lastDiaryDate = runtime.dateKey()
+  state.lastHumanActivity = Date.now() - 5 * 3600_000
+  runtime.saveState()
+  assert.equal(runtime.quietDue(at(3)).reason, 'already-diary')
+
+  // 静默超过阈值 → 该写日记
+  state.lastDiaryDate = ''
+  state.lastHumanActivity = Date.now() - 4 * 3600_000
+  state.lastKakaActivity = 0
+  runtime.saveState()
+  assert.equal(runtime.quietDue(at(3)).due, true)
+
+  // 主人刚动过 → 不写
+  state.lastHumanActivity = Date.now()
+  runtime.saveState()
+  assert.equal(runtime.quietDue(at(3)).reason, 'still-active')
+})
+
+test('msUntilWindowEnd：返回正的剩余毫秒', () => {
+  runtime.patchSettings({ life: { windowStart: '00:00', windowEnd: '23:59' } })
+  const now = new Date()
+  now.setHours(12, 0, 0, 0)
+  const ms = runtime.msUntilWindowEnd(now)
+  assert.ok(ms > 0 && ms < 24 * 3600_000, `ms=${ms}`)
+})
+
+test('pickRamble：总是从文案池里挑一条非空的话', () => {
+  for (let i = 0; i < 20; i += 1) {
+    const line = runtime.pickRamble()
+    assert.equal(typeof line, 'string')
+    assert.ok(line.length > 0)
+  }
+})
+
 test('发件箱：序号递增，可增量取', () => {
   const before = runtime.outboxCursor()
   const entry = runtime.beep('done')

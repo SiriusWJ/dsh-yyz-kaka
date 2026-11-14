@@ -243,17 +243,27 @@ const disabledMarkup = render(React.createElement(petSlot.component, {
 }))
 if (disabledMarkup.includes('#img')) throw new Error('关闭宠物后不应该渲染图片')
 
-// 4) 设置页：渲染容器与分组
-const settingsMarkup = render(React.createElement(settingsSlot.component, {
+// 4) 设置页：加载态 + 带数据的完整渲染
+const settingsEmpty = render(React.createElement(settingsSlot.component, {
   t,
   close: () => {},
   openSession: () => true,
 }))
-if (!settingsMarkup.includes('dsc-kaka-settings')) throw new Error(`设置页没有渲染出容器：${settingsMarkup.slice(0, 160)}`)
+if (!settingsEmpty.includes('dsc-kaka-settings')) throw new Error(`设置页没有渲染出容器：${settingsEmpty.slice(0, 160)}`)
+
+const settingsMarkup = render(React.createElement(settingsSlot.component, {
+  t,
+  close: () => {},
+  openSession: () => true,
+  initialSettings: petSettings,
+}))
+for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'group.data', 'row.petEnabled', 'action.selftest']) {
+  if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
+}
 
 console.log('注入槽位 :', injected.join(', '))
 console.table(registrations.map(item => ({ slot: item.options.name, id: item.options.id, order: item.options.order })))
-console.log('渲染长度 : idle=%d kaka=%d disabled=%d settings=%d',
-  idleMarkup.length, kakaMarkup.length, disabledMarkup.length, settingsMarkup.length)
+console.log('渲染长度 : idle=%d kaka=%d disabled=%d settings(空)=%d settings(满)=%d',
+  idleMarkup.length, kakaMarkup.length, disabledMarkup.length, settingsEmpty.length, settingsMarkup.length)
 console.log('宠物根标记 : data-kaka-pet %s', kakaMarkup.includes('data-kaka-pet') ? '存在' : '缺失')
 console.log('\nCLIENT SMOKE OK')
