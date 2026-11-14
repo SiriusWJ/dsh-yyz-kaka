@@ -1,0 +1,10 @@
+# dsh-market / awesome-dsh-plugin 目录条目草案
+# 提交位置：awesome-dsh-plugin 仓库的 data/plugins/SiriusWJ__dsh-yyz-kaka.yml
+# 收录门槛（官方）：仓库 ≥10 commits 且创建满 1 天、带 dsh-plugin topic。
+
+url: https://github.com/SiriusWJ/dsh-yyz-kaka
+name: dsh-yyz-kaka
+category: companion
+description:
+  zh: 咔咔——住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格、跨会话共享记忆、日记与画像、画笔、螃蟹声。
+  en: Kaka — a crab companion for DeepSeek Harness with its own agent preset, shared memory, diary, a drawing pen, and crab sounds.
