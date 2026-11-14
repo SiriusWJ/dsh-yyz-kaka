@@ -952,6 +952,8 @@ window.__ModuleLoader__.load({
             t: t,
             part: panel,
             style: panelStyle,
+            initialTab: props.initialTab,
+            initialText: props.initialText,
             onClose: function () { setPanel(null) },
           }),
           document.body,
@@ -1574,11 +1576,11 @@ window.__ModuleLoader__.load({
       var t = props.t
       var initialPart = props.part || 'about'
       var [section, setSection] = useState(['plan', 'memory', 'settings'].includes(initialPart) ? initialPart : 'about')
-      var [tab, setTab] = useState('diary')
+      var [tab, setTab] = useState(props.initialTab || 'diary')
       var [meta, setMeta] = useState(null)
       var [about, setAbout] = useState(null)
       var [day, setDay] = useState('')
-      var [text, setText] = useState('')
+      var [text, setText] = useState(props.initialText || '')
       var [dayArt, setDayArt] = useState([])
       var [art, setArt] = useState({ items: [], portrait: null })
       var [plan, setPlan] = useState([])
@@ -1620,12 +1622,7 @@ window.__ModuleLoader__.load({
         setError('')
 
         if (tab === 'agent' || tab === 'user') {
-          if (tab === 'user') {
-            // 画像页只看画，不用拉记忆正文
-            setText('')
-            setLoading(false)
-            return function () { cancelled = true }
-          }
+          // 画像页 = 她画的形象 + USER.md 正文；记忆页 = MEMORY.md
           setLoading(true)
           getJson(API + '/view?part=memory&target=' + tab)
             .then(function (payload) {
@@ -1722,16 +1719,33 @@ window.__ModuleLoader__.load({
             h('img', { src: ASSET, alt: '' }),
             h('div', null, t('plan.empty')))
       } else if (tab === 'user') {
-        // 画像页只放主人的形象；别的画作属于「日记」和聊天，不在这里堆成画板
-        body = art.portrait
-          ? h('figure', { className: 'dsc-kaka-portrait' },
-            h('img', { src: art.portrait.url, alt: art.portrait.title }),
-            h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)),
-            h('figcaption', { style: { opacity: .7 } }, t('view.portraitNote')))
-          : h('div', { className: 'dsc-kaka-portrait-empty' },
-            h('img', { src: ASSET, alt: '' }),
-            h('div', null, t('view.portraitEmpty')),
-            h('div', { style: { opacity: .75 } }, t('view.portraitHint')))
+        // 画像页 = 她画的主人形象 + USER.md 里的文字记忆（两者可以只有一样）
+        var userBlocks = text ? parseMemory(text) : []
+        body = h('div', null,
+          art.portrait
+            ? h('figure', { className: 'dsc-kaka-portrait' },
+              h('img', { src: art.portrait.url, alt: art.portrait.title }),
+              h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)),
+              h('figcaption', { style: { opacity: .7 } }, t('view.portraitNote')))
+            : (userBlocks.length
+              ? null
+              : h('div', { className: 'dsc-kaka-portrait-empty' },
+                h('img', { src: ASSET, alt: '' }),
+                h('div', null, t('view.portraitEmpty')),
+                h('div', { style: { opacity: .75 } }, t('view.portraitHint')))),
+          userBlocks.length
+            ? h('div', { style: { marginTop: art.portrait ? 12 : 0 } },
+              h('div', { className: 'dsc-kaka-prose' }, userBlocks.map(function (block, index) {
+                var key = 'u' + index
+                if (block.type === 'heading') return h('h3', { key }, block.text)
+                if (block.type === 'list') {
+                  return h('ul', { key }, block.items.map(function (item, itemIndex) {
+                    return h('li', { key: key + '-' + itemIndex }, item)
+                  }))
+                }
+                return h('p', { key }, block.text)
+              })))
+            : null)
       } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
           h('i', { style: { width: '92%' } }), h('i', { style: { width: '78%' } }), h('i', { style: { width: '64%' } }))

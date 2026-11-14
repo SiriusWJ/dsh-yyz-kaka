@@ -416,6 +416,20 @@ const settingsInPanel = render(React.createElement(petSlot.component, {
 if (!settingsInPanel.includes('data-kaka-panel')) throw new Error('设置分区没渲染出面板')
 if (!settingsInPanel.includes('dsc-kaka-settings')) throw new Error('设置分区没渲染出设置页')
 
+// 4h) 画像页：既有形象说明也要有 USER.md 文字记忆
+const portraitMarkup = render(React.createElement(petSlot.component, {
+  sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  initialPanel: 'memory',
+  initialTab: 'user',
+  initialText: '# USER.md · 主人画像\n\n- [称呼] 主人要求以后叫「老大」。\n- [饮品偏好] 主人喜欢喝白茶。',
+  useSessions: useSessionsFor('kaka'),
+}))
+if (!portraitMarkup.includes('老大')) throw new Error('画像页没有渲染文字记忆（老大）')
+if (!portraitMarkup.includes('白茶')) throw new Error('画像页没有渲染文字记忆（白茶）')
+if (!portraitMarkup.includes('dsc-kaka-prose')) throw new Error('画像页没有用记忆排版')
+
 // 5) 小本子面板：打开某一页时渲染容器、页签与标题
 const panelMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
