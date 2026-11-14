@@ -64,10 +64,8 @@ window.__ModuleLoader__.load({
         'view.chars': '字符',
         'about.tab': '关于',
         'dock.about': '关于咔咔',
-        'dock.diary': '日记',
         'dock.memory': '记忆',
-        'dock.dream': '梦',
-        'dock.plan': '她的日程',
+        'dock.plan': '事项',
         'panel.title': '咔咔的小本子',
         'panel.close': '关闭',
         'plan.kind.reminder': '闹钟',
@@ -198,10 +196,8 @@ window.__ModuleLoader__.load({
         'view.chars': 'chars',
         'about.tab': 'About',
         'dock.about': 'About her',
-        'dock.diary': 'Journal',
         'dock.memory': 'Memory',
-        'dock.dream': 'Dreams',
-        'dock.plan': 'Her schedule',
+        'dock.plan': 'Schedule',
         'panel.title': "Kaka's notebook",
         'panel.close': 'Close',
         'plan.kind.reminder': 'Alarm',
@@ -1436,25 +1432,27 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 咔咔的小本子（浮层）。由宠物旁的图标坞打开，五个分片：
-     * 关于 / 日记 / 记忆 / 梦 / 她的日程。
+     * 咔咔的小本子（浮层）。图标坞三个入口：
+     * 关于 / 事项 / 记忆；记忆里再分 日记 / 梦 / 长记忆 / 主人画像。
      */
     function KakaPanel(props) {
       var t = props.t
       var initialPart = props.part || 'about'
-      var [part, setPart] = useState(initialPart)
+      var [section, setSection] = useState(initialPart === 'plan' || initialPart === 'memory' ? initialPart : 'about')
+      var [tab, setTab] = useState('diary')
       var [meta, setMeta] = useState(null)
       var [about, setAbout] = useState(null)
       var [day, setDay] = useState('')
-      var [target, setTarget] = useState('agent')
       var [text, setText] = useState('')
       var [plan, setPlan] = useState([])
       var [loading, setLoading] = useState(false)
       var [note, setNote] = useState('')
       var [error, setError] = useState('')
 
-      // 图标坞切换分片时同步
-      useEffect(function () { setPart(initialPart) }, [initialPart])
+      useEffect(function () {
+        var next = initialPart === 'plan' || initialPart === 'memory' ? initialPart : 'about'
+        setSection(next)
+      }, [initialPart])
 
       useEffect(function () {
         getJson(API + '/view?part=meta')
@@ -1466,21 +1464,23 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(function () {
-        if (part !== 'plan') return function () {}
+        if (section !== 'plan') return function () {}
         var cancelled = false
         getJson(API + '/life/state')
           .then(function (payload) { if (!cancelled && payload && payload.ok) setPlan(payload.events || []) })
           .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
         return function () { cancelled = true }
-      }, [part])
+      }, [section])
 
       useEffect(function () {
-        if (part === 'about' || part === 'plan') return function () {}
+        if (section !== 'memory') return function () {}
         var cancelled = false
         setError('')
-        if (part === 'memory') {
+
+        // 长记忆 / 主人画像
+        if (tab === 'agent' || tab === 'user') {
           setLoading(true)
-          getJson(API + '/view?part=memory&target=' + encodeURIComponent(target))
+          getJson(API + '/view?part=memory&target=' + tab)
             .then(function (payload) {
               if (cancelled) return
               setText(payload && payload.ok ? (payload.text || '') : '')
@@ -1490,7 +1490,9 @@ window.__ModuleLoader__.load({
             .then(function () { if (!cancelled) setLoading(false) })
           return function () { cancelled = true }
         }
-        var list = (part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []
+
+        // 日记 / 梦
+        var list = (tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []
         var selected = day && list.indexOf(day) >= 0 ? day : (list[0] || '')
         if (!selected) {
           setText('')
@@ -1498,7 +1500,7 @@ window.__ModuleLoader__.load({
         }
         if (selected !== day) setDay(selected)
         setLoading(true)
-        getJson(API + '/view?part=' + part + '&date=' + encodeURIComponent(selected))
+        getJson(API + '/view?part=' + tab + '&date=' + encodeURIComponent(selected))
           .then(function (payload) {
             if (cancelled) return
             setText(payload && payload.ok ? (payload.text || '') : '')
@@ -1507,52 +1509,70 @@ window.__ModuleLoader__.load({
           .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
           .then(function () { if (!cancelled) setLoading(false) })
         return function () { cancelled = true }
-      }, [part, day, target, meta, t])
+      }, [section, tab, day, meta, t])
 
-      var titles = {
-        about: t('dock.about'), diary: t('view.diary'), memory: t('view.memory'),
-        dream: t('view.dream'), plan: t('dock.plan'),
+      var sectionTitles = {
+        about: t('dock.about'),
+        plan: t('dock.plan'),
+        memory: t('dock.memory'),
       }
 
+      var tabs = [
+        { value: 'diary', label: t('view.diary') },
+        { value: 'dream', label: t('view.dream') },
+        { value: 'agent', label: t('view.agent') },
+        { value: 'user', label: t('view.user') },
+      ]
+
       var chips = null
-      if (part === 'memory') {
-        chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
-          [
-            { value: 'agent', label: t('view.agent') },
-            { value: 'user', label: t('view.user') },
-          ].map(function (item) {
-            return h('button', {
-              key: item.value,
-              type: 'button',
-              className: 'dsc-kaka-chip' + (target === item.value ? ' is-active' : ''),
-              onClick: function () { setTarget(item.value) },
-            }, item.label)
-          }))
-      } else if (part === 'diary' || part === 'dream') {
-        var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
-        chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
-          days.map(function (item) {
-            return h('button', {
-              key: item,
-              type: 'button',
-              className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
-              onClick: function () { setDay(item) },
-            }, item)
-          }))
+      if (section === 'memory') {
+        if (tab === 'agent' || tab === 'user') {
+          chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
+            tabs.map(function (item) {
+              return h('button', {
+                key: item.value,
+                type: 'button',
+                className: 'dsc-kaka-chip' + (tab === item.value ? ' is-active' : ''),
+                onClick: function () { setTab(item.value); setDay('') },
+              }, item.label)
+            }))
+        } else {
+          var days = ((tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
+          chips = h(React.Fragment, null,
+            h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 8 } },
+              tabs.map(function (item) {
+                return h('button', {
+                  key: item.value,
+                  type: 'button',
+                  className: 'dsc-kaka-chip' + (tab === item.value ? ' is-active' : ''),
+                  onClick: function () { setTab(item.value); setDay('') },
+                }, item.label)
+              })),
+            days.length
+              ? h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
+                days.map(function (item) {
+                  return h('button', {
+                    key: item,
+                    type: 'button',
+                    className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
+                    onClick: function () { setDay(item) },
+                  }, item)
+                }))
+              : null)
+        }
       }
 
       var body
-      if (part === 'about') {
+      if (section === 'about') {
         body = h(KakaAbout, { t: t, data: about })
-      } else if (part === 'plan') {
+      } else if (section === 'plan') {
         body = plan.length
           ? h('div', null, plan
             .slice()
             .sort(function (a, b) { return a.dueAt - b.dueAt })
             .map(function (event) {
-              var label = t(EVENT_KEYS[event.kind] || 'plan.kind.other')
               return h('div', { className: 'dsc-kaka-plan-row', key: event.id },
-                h('span', { className: 'dsc-kaka-badge' }, label),
+                h('span', { className: 'dsc-kaka-badge' }, t(EVENT_KEYS[event.kind] || 'plan.kind.other')),
                 h('span', null, event.what || t('plan.noWhat')),
                 h('span', { className: 'when' }, formatClock(event.dueAt)))
             }))
@@ -1566,7 +1586,7 @@ window.__ModuleLoader__.load({
         body = h('div', { className: 'dsc-kaka-view-empty' },
           h('img', { src: ASSET, alt: '' }),
           h('div', null, t('view.empty')))
-      } else if (part === 'memory') {
+      } else if (tab === 'agent' || tab === 'user') {
         body = h('div', { className: 'dsc-kaka-prose' }, parseMemory(text).map(function (block, index) {
           var key = 'b' + index
           if (block.type === 'heading') return h('h3', { key }, block.text)
@@ -1578,7 +1598,7 @@ window.__ModuleLoader__.load({
           return h('p', { key }, block.text)
         }))
       } else {
-        var selectedDay = day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || ''
+        var selectedDay = day || ((tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || ''
         body = h(React.Fragment, null,
           selectedDay
             ? h('div', { className: 'dsc-kaka-panel-meta' },
@@ -1590,7 +1610,7 @@ window.__ModuleLoader__.load({
           })))
       }
 
-      var dreamAction = part === 'dream'
+      var dreamAction = tab === 'dream' && section === 'memory'
         ? h('button', {
           type: 'button',
           className: 'dsc-kaka-panel-action',
@@ -1605,7 +1625,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true' },
         h('div', { className: 'dsc-kaka-panel-head' },
           h('div', { className: 'dsc-kaka-panel-titles' },
-            h('div', { className: 'dsc-kaka-panel-title' }, titles[part] || t('panel.title')),
+            h('div', { className: 'dsc-kaka-panel-title' }, sectionTitles[section] || t('panel.title')),
             h('div', { className: 'dsc-kaka-panel-sub' },
               about ? (about.species || '') + ' · ' + formatDuration(about.companionMs, t) : t('view.loading'))),
           h('button', {
@@ -1614,20 +1634,24 @@ window.__ModuleLoader__.load({
             'aria-label': t('panel.close'),
             onClick: function () { if (props.onClose) props.onClose() },
           }, '✕')),
-        h('div', { className: 'dsc-kaka-panel-tabs' }, DOCK_ITEMS.map(function (item) {
+        h('div', { className: 'dsc-kaka-panel-tabs' }, [
+          { value: 'about', label: t('dock.about') },
+          { value: 'plan', label: t('dock.plan') },
+          { value: 'memory', label: t('dock.memory') },
+        ].map(function (item) {
           return h('button', {
-            key: item.part,
+            key: item.value,
             type: 'button',
-            className: 'dsc-kaka-ptab' + (part === item.part ? ' is-active' : ''),
-            onClick: function () { setPart(item.part); setDay('') },
-          }, t(item.label))
+            className: 'dsc-kaka-ptab' + (section === item.value ? ' is-active' : ''),
+            onClick: function () { setSection(item.value); setNote('') },
+          }, item.label)
         })),
         h('div', { className: 'dsc-kaka-panel-body' },
           chips,
           error ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error) : null,
           body,
-          note ? h('div', { className: 'dsc-kaka-panel-sub', style: { marginTop: 10 } }, note) : null,
-          dreamAction),
+          dreamAction,
+          note ? h('div', { className: 'dsc-kaka-panel-sub', style: { marginTop: 10 } }, note) : null),
       )
     }
 
