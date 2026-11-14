@@ -1,0 +1,68 @@
+{
+  "name": "dsh-yyz-kaka",
+  "version": "0.1.0",
+  "description": "咔咔：一只住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格、跨会话共享记忆、会写日记做梦、有嗓子也有作息。Kaka is a crab companion for DeepSeek Harness: its own agent preset, shared long-term memory, diary and dreams, a voice, and a life rhythm.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "author": "WJ",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-preset",
+    "persona",
+    "desktop-pet",
+    "tts",
+    "memory"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SiriusWJ/dsh-yyz-kaka.git"
+  },
+  "homepage": "https://github.com/SiriusWJ/dsh-yyz-kaka#readme",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./preset/kaka-memory.mjs": "./preset/kaka-memory.mjs",
+    "./preset/kaka-voice.mjs": "./preset/kaka-voice.mjs",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.png",
+    "./sprite": "./sprite.png"
+  },
+  "files": [
+    "lib",
+    "preset",
+    "client",
+    "locale",
+    "docs",
+    "icon.png",
+    "sprite.png",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": "^0.2.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  }
+}

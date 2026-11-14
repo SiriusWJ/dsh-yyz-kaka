@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "咔咔 Kaka",
+    "description": "把咔咔这位小螃蟹工作助手装进 DeepSeek Harness：一个独立的人格预设（不加载工作区 AGENTS.md，所以不会被别的人设串味）、跨会话共享的长记忆与主人画像、每天写日记、夜里做梦整理记忆、能开口说话的嗓子（DeepSeek TTS）、输入框旁边的宠物动画，以及一条 5 秒一跳的生命线程（作息、闹钟、随机冒泡）。kaka_memory / kaka_diary / kaka_journal / kaka_dream / kaka_say / kaka_beep / kaka_mood / kaka_remind 只在选中「咔咔」预设的会话里出现，其他预设看不到。数据保存在 $DSH_HOME/kaka/，卸载插件不会删除；语音按字符计费，默认单条不超过 200 计费字符，命中缓存不重复扣费。"
+  }
+}

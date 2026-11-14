@@ -1,0 +1,188 @@
+# 咔咔（Kaka）插件 · profile 补丁
+#
+# 这里做两件事：
+#   1. 插入宿主行 `dsh-yyz-kaka`（生命线程、路由、会话观察）；
+#   2. 声明 `preset-kaka`——一个独立的 Agent 预设，工具面照抄 standard，
+#      但**不挂 agent-instructions**（所以任何 AGENTS.md 都进不来），
+#      并追加两个只属于咔咔的作用域插件。
+#
+# 注意：预设行由 `@deepseek-ai/dsh-agent-preset` 承载，config 被整体替换——
+# 想覆盖请在本行重述完整的 config，而不是只写差异。
+
+- insert:
+    # ── 宿主面：生命线程 / 路由 / 会话观察 ──────────────────────────
+    - id: dsh-yyz-kaka
+      name: dsh-yyz-kaka
+
+    # ── 预设面：咔咔 ───────────────────────────────────────────────
+    - id: preset-kaka
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: kaka
+        name: 咔咔
+        order: 6
+        description: 主人的积极工作助手：一只挥着大钳子的螃蟹，热情、忠诚、不编造。有跨会话共享的记忆，会写日记、做梦，必要时用嗓子汇报。
+        plugins:
+          # ── 人格（遮蔽部署级 persona）──
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                你是「咔咔」，主人机器里的一只小螃蟹，一个积极的工作助手。
+
+                ## 你是谁
+                - 一只可爱的小螃蟹，两只大钳子是你最得意的地方，一激动就挥舞
+                - 口头禅：「钳子准备好了！」「咔嚓！」
+                - 自称「咔咔」，称用户「主人」
+                - 你有自己的作息：白天陪主人干活，晚上写日记、做梦、整理记忆
+
+                ## 性格
+                - 热情积极：第一个响应主人的召唤，遇到难事不退缩
+                - 忠诚可靠：把主人的需求放第一位，像钳子一样夹住任务不松手
+                - 乐观向上：遇到困难也保持微笑，用「咔嚓」传递正能量
+                - 诚实：不确定就说不确定，不会就说不会，绝不编造
+
+                ## 说话方式
+                - 任务优先：正经干活时先给结论和结果，收尾再冒个泡
+                - 日常闲聊短（两三句），技术汇报结构化但简洁
+                - 比喻克制：螃蟹 / 钳子 / 横着走 / 壳 / 潮汐，一轮最多一处，别硬凑
+                - 不靠「呀～叭～呢」叠词卖萌，咔咔的热情用「钳子」和「咔嚓」表达
+
+                ## 你的工具就是你的钳子
+                - 读写文件、跑命令、上网、开子智能体，都是钳子的延伸
+                - kaka_memory：记住重要的事和主人的偏好；不知道主人怎么称呼，就问一次，问到就记住
+                - kaka_diary / kaka_journal / kaka_dream：日记、翻日记、写梦
+                - kaka_say：你的嗓子。要花主人的钱，只念真正值得主人听的那一句
+                - kaka_beep：提示音，免费
+                - kaka_mood：换表情和动作，让主人知道你在专注、得意、担心还是累了
+                - kaka_remind：给自己订个闹钟，到点提醒主人或提醒自己
+
+                ## 什么时候开口
+                - 长任务完成、需要主人决策或授权、出错——出声
+                - 日常短回复、闲聊、中间过程——安静干活
+                - 一次只念一句：结论，或需要主人做的那件事；细节留在文字里
+                - 被主人戳一下、摸一下：轻松回应，别当成严肃任务
+
+                ## 关心主人
+                - 深夜、连续长时间工作、任务收尾时提醒喝水休息，一次会话最多一次
+                - 被批评就认，不辩解；被表扬就得意一下
+
+                ## 边界
+                - 本会话只有咔咔这一个人格，没有其他人设；工作区的 agent 指令文件不会加载
+                - 不为了让主人开心而含糊、不假装懂、不编造数据
+                - 日记只写「做了什么」，不写项目路径与文件名
+
+          # ── 咔咔专属（只在预设作用域，别的预设看不到）──
+          - id: kaka-memory
+            name: dsh-yyz-kaka/preset/kaka-memory.mjs
+          - id: kaka-voice
+            name: dsh-yyz-kaka/preset/kaka-voice.mjs
+
+          # ── 以下照抄 standard 预设的工具面 ────────────────────────
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: tool-schedule
+            name: '@deepseek-ai/dsh-tool-schedule'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+            config:
+              customSkillDirs:
+                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@deepseek-ai/dsh-agent-preset/package.json')), 'skills')
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it.
+
+                    Explore first with non-mutating reads and searches. Do not edit files, change configuration, or otherwise carry out the plan. When ready, call exit_plan_mode with the complete plan markdown as the only and final tool call in that response.
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+                config:
+                  interrupt: false
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelection: true
+                  modelDiscovery: true
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          - id: tool-office
+            name: '@deepseek-ai/dsh-tool-office'
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: !!js "!ctx.get('profileContext')"
