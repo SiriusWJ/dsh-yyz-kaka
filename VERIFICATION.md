@@ -16,7 +16,7 @@
 | 6 | fork / 压缩 / resume 后记忆不重复不丢失 | 🟡 | 结构上成立：记忆是系统提示变量，每次装配重算，不进消息历史；未做 fork 实测 |
 | 7 | 点螃蟹 → 被摸反馈；空闲投递；忙时只动画 | 🟡 | 投递与回复链路实测（`delivered: true` → 她回应「咔嚓——钳子被戳得痒痒的！」）；动画视觉待人工确认 |
 | 8 | `kaka_say` 出声；同文本不重复计费 | ✅ | 首次 `cached=false, billed=20`；第二次 `cached=true, billed=0`；音频 `109 KB / 73 KB` WAV 落盘；今日计费 `66 字符 / 4 次 / 1 次缓存 / ¥0.0099` |
-| 9 | 提示音三档生效 | 🟡 | `done / error / question / attention / pet` 五种提示音都在发件箱出现过，且带正确会话 id；三档切换未逐档实测 |
+| 9 | 提示音三档生效 | ✅ | 逐档实测：`off` 跑一轮 → 0 个 beep；`always` 跑一轮（短回复）→ `beep:done`；`important`（默认）下长任务/出错才响。五种提示音 `done/error/question/attention/pet` 均出现过且带正确会话 id |
 | 10 | 宠物只在咔咔会话出现 | 🟡 | 槽位 `conversation.input.overlay` 注册 `dsh-yyz-kaka-pet`；组件按 `projectionValues.agentPreset === 'kaka'` 判定；视觉待人工确认 |
 | 11 | 心跳不泄漏定时器 | 🟡 | 用 `ctx.effect` 清理；本轮经历 6 次热重载 + 2 次重启后生命周期行为正常；未做定时器计数实测 |
 | 12 | 窗口内 3h 无活动 → 写日记 → 做梦 → 醒 | ✅ | 自动链路（无手动触发）：`awake → quiet → diary → dreaming`；`dreams/2026-11-14.md` 自动写入；日记流水记录 `kaka_journal/kaka_memory/kaka_dream` |
