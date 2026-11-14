@@ -541,13 +541,19 @@ window.__ModuleLoader__.load({
       var t = props.t
 
       // 预设判定：宿主官方 agent-preset 标签读的就是这个字段
-      var preset = props.useSessions
-        ? props.useSessions(function (snapshot) {
-          return sessionId && snapshot && snapshot.byId && snapshot.byId[sessionId]
-            ? snapshot.byId[sessionId].projectionValues && snapshot.byId[sessionId].projectionValues.agentPreset
-            : undefined
-        })
-        : undefined
+      // 读会话快照要稳：宿主快照形状变了也不能把整块渲染带崩
+      var preset
+      if (typeof props.useSessions === 'function') {
+        try {
+          preset = props.useSessions(function (snapshot) {
+            return sessionId && snapshot && snapshot.byId && snapshot.byId[sessionId]
+              ? snapshot.byId[sessionId].projectionValues && snapshot.byId[sessionId].projectionValues.agentPreset
+              : undefined
+          })
+        } catch (err) {
+          preset = undefined
+        }
+      }
       var isKaka = preset === PRESET_ID
 
       var anchorRef = useRef(null)
