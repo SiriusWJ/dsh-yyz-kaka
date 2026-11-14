@@ -370,6 +370,22 @@ window.__ModuleLoader__.load({
       var cursorRef = useRef(0)
       var bubbleTimer = useRef(null)
       var pokeTimer = useRef(null)
+      var sessionRef = useRef(sessionId)
+      sessionRef.current = sessionId
+
+      /** 重新拉一次宿主配置（宠物尺寸 / 音量 / 语言等即时设置）。 */
+      var refreshProfile = useCallback(function () {
+        var sid = sessionRef.current || ''
+        return getJson(API + '/profile?session=' + encodeURIComponent(sid))
+          .then(function (payload) {
+            if (payload && payload.ok) {
+              setSettings(payload.settings)
+              player.volume = payload.settings.voice.volume
+              if (payload.life && payload.life.mood) setMood(payload.life.mood.name)
+            }
+          })
+          .catch(function () {})
+      }, [])
 
       var showBubble = useCallback(function (text, ms) {
         if (!text) return
@@ -433,12 +449,15 @@ window.__ModuleLoader__.load({
           for (var i = 0; i < items.length; i += 1) {
             var item = items[i]
             if (!item) continue
+            // 带会话的条目只归那个会话所有：多标签/多会话时不串音
+            if (item.session && item.session !== sessionRef.current) continue
             if (item.kind === 'say') player.enqueue(item.audioUrl)
             else if (item.kind === 'beep') playBeep(item.sound)
             else if (item.kind === 'mood') {
               setMood(item.mood || 'idle')
               if (item.mood === 'proud') showBubble(t('pet.proud'))
             } else if (item.kind === 'bubble') showBubble(item.text)
+            else if (item.kind === 'settings') refreshProfile()
             else if (item.kind === 'stop') player.stop()
           }
         }
@@ -466,7 +485,7 @@ window.__ModuleLoader__.load({
           stopped = true
           if (timer) clearTimeout(timer)
         }
-      }, [isKaka, sessionId, showBubble, t])
+      }, [isKaka, sessionId, showBubble, t, refreshProfile])
 
       // 心情自动回落：petted/proud 之后回到 idle
       useEffect(function () {

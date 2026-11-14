@@ -332,28 +332,33 @@ $DSH_HOME/kaka/
 ## 活跃项目
 ```
 
-### 6.2 注入协议（首轮 + 变更时）
+### 6.2 注入协议（实现与设计的一处修正）
 
-照 `dsh-agent-instructions` 的形态设计，目标是 KV cache 友好：
+原设计写的是「首轮 + 变更时注入 durable 消息」。实现时改成了**系统提示章节 + 变量**，理由写在这里：
 
-| 时机 | 动作 |
-|---|---|
-| 会话首轮 | 注入一条 sourced 持久化用户消息，`<system-reminder>` 框架，内容 = MEMORY.md + USER.md（各自截断到 8k） |
-| 每轮 pre-step | 计算两份文件的 SHA-1，与 session projection 中记录的上次摘要比对；**变了才**追加一条「咔咔的记忆已更新」+ 新内容；没变则一个字都不发 |
-| 文件被外部改动 | 同上，下一轮自动反映 |
-| 压缩 / fork / resume | projection 随会话日志持久化，保证不重复注入、不丢失 |
+```
+ctx.systemPrompt.variable('kaka_memory', () => renderMemoryBlock())
+ctx.systemPrompt.section({ name: 'kaka:memory', order: 10100, text: '{{kaka_memory}}' })
+```
 
-实现要点（最容易出错的地方）：
+| 方案 | 首步可见 | 构造消息 | UI 噪音 | 缓存 |
+|---|---|---|---|---|
+| durable/inbox 消息 | ❌ 注入落在下一个 step，第一句回复看不到记忆 | 要手搓 UserMessage | 会话里多出"context"节点 | 变更时只失效后缀 |
+| **系统提示章节 + 变量（采用）** | ✅ 第一步就在提示里 | 不需要 | 无 | 记忆不变时完全稳定；变了整段前缀失效一次 |
 
-- 去重状态走 session projection，不写全局变量。
-- 注入消息带 typed source（含内容摘要与变更列表），保证可回放。
-- 内容超限时截断并在末尾附「记忆过长，请在整理时合并」提示。
+代价是记忆每轮都占 token（和持久消息一样），换来的是「第一步就能叫出主人的名字」这种确定性。
+变量的返回值必须是字符串——返回 `undefined` 会让整个装配失败，所以 `renderMemoryBlock()` 永远返回 `''` 而不是 undefined。
 
 ### 6.3 工具契约
 
 | 工具 | 参数 | 行为 |
 |---|---|---|
 | `kaka_memory` | `action: read\|append\|replace`、`target: agent\|user`、`text?` | 读/追加/整体替换；宿主侧串行队列 + 临时文件 rename 原子写；返回写入后的字符数与余量 |
+| `kaka_diary` | `text` | 往今天日记的「手记」追加一句（第一人称） |
+| `kaka_journal` | `date?` | 读某天的日记；`date: "list"` 列出最近的日记与梦 |
+| `kaka_dream` | `text` | 写今晚的梦（`dreams/YYYY-MM-DD.md`），下次会话会出现在提示里 |
+
+四个工具都注册在咔咔预设作用域：别的预设的模型根本看不到这些名字。
 
 写入策略：**咔咔自主决定**（主人已确认）。persona 里给出"写什么 / 不写什么"的规则，不设确认门槛。
 
@@ -457,10 +462,19 @@ $DSH_HOME/kaka/
 kaka_say(text)
   → 宿主：剥格式 → 计费预检 → sha1 查缓存
   → 未命中：POST /v1/tools/tts（wav）→ 存 kaka/audio/<sha1>.wav
-  → 发件箱 seq++ {kind:'say', url:'/kaka/audio/<sha1>.wav', text}
-客户端（页面可见 + 当前会话是咔咔）每 1s GET /kaka/voice/pending?after=<seq>
-  → new Audio(url).play()
+  → 发件箱 seq++ {kind:'say', session, url, text}
+客户端（页面可见 + 当前会话是咔咔）每 1.5s GET /kaka/voice/pending?after=<seq>
+  → 过滤掉 session 不属于自己的条目 → new Audio(url).play()
 ```
+
+**会话隔离**：发件箱是全局的，但每条 `say/beep/mood` 都带 `session`；客户端只播属于自己的，
+多标签、多会话同时开着时不会串音。生命线程的 `bubble/mood` 不带 session，属于"公共情绪"。
+
+### 8.6 DSH 包解析（实现要点）
+
+插件自己的 `node_modules` 里没有 DSH 的包（它们住在安装目录的 `app.asar` 里，`link:` 安装也不会装
+peerDependencies）。所以 `lib/dsh-modules.js` 先试直接 import、再按 `DSH_INSTALL_DIR` 用
+`createRequire` 解析后动态 import——这一步在 Desktop（Electron 主进程，asar 感知）里可用。
 
 ### 8.3 提示三档（管的是 beep）
 
