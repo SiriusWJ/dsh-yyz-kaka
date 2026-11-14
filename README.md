@@ -65,7 +65,8 @@ dsh plugin --profile desktop add link:D:/Code/dsh-yyz-kaka
 ```
 MEMORY.md            她的长记忆
 USER.md              主人画像
-diary/YYYY-MM-DD.md  每天的日记（流水 + 手记）
+diary/YYYY-MM-DD.md  每天的日记（只有咔咔写的第一人称散文）
+journal/YYYY-MM-DD.md 当天的素材（宿主自动记的机械事实，只给她写日记时参考）
 dreams/YYYY-MM-DD.md 每晚的梦
 audio/<sha1>.wav     TTS 缓存（同一句不重复计费）
 state.json           活动时间、闹钟事件、日记/梦进度、计费

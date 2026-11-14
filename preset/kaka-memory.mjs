@@ -23,6 +23,7 @@ import {
   listDiaries,
   log,
   readDiary,
+  readJournal,
   readDream,
   readMemory,
   recentDreams,
@@ -145,14 +146,18 @@ export async function apply(ctx) {
     presentCall: args => ({ card: 'generic', title: `记忆 · ${args.action}`, kind: 'other' }),
   }))
 
-  // ── 3. kaka_journal：读日记 ──────────────────────────────────────
+  // ── 3. kaka_journal：读日记（可选带素材） ────────────────────────
   ctx.tools.register(defineTool({
     name: 'kaka_journal',
-    description: '读咔咔的日记与最近的梦。不传日期读今天；也可以列出最近写过哪些天。',
+    description: '读咔咔的日记、梦，以及（可选）当天的素材。素材是宿主记下的"今天发生了什么"，写日记时参考它，但不要把素材原文写进日记。',
     parameters: {
       date: {
         type: 'string',
         description: 'YYYY-MM-DD；省略则读今天。传 "list" 列出最近 14 天。',
+      },
+      facts: {
+        type: 'boolean',
+        description: 'true 时同时返回当天素材（时间、轮次、工具名等机械记录），只给你自己看，不要复述进日记。',
       },
     },
     output: {
@@ -163,16 +168,24 @@ export async function apply(ctx) {
           kind: { type: 'string', required: true },
           date: { type: 'string' },
           text: { type: 'string' },
+          facts: { type: 'string' },
           days: { type: 'array', items: { type: 'string' } },
           dreams: { type: 'array', items: { type: 'string' } },
         },
       },
-      render: (_args, value) => [{
-        type: 'text',
-        text: value.kind === 'list'
-          ? `日记：${(value.days || []).join(', ') || '（空）'}\n梦：${(value.dreams || []).join(', ') || '（空）'}`
-          : `${value.date} 的日记：\n${value.text || '（这一天还没有日记）'}`,
-      }],
+      render: (_args, value) => {
+        if (value.kind === 'list') {
+          return [{
+            type: 'text',
+            text: `日记：${(value.days || []).join(', ') || '（空）'}\n梦：${(value.dreams || []).join(', ') || '（空）'}`,
+          }]
+        }
+        const parts = [`${value.date} 的日记：\n${value.text || '（这一天还没有日记）'}`]
+        if (value.facts !== undefined) {
+          parts.push(`\n今天的素材（只供参考，不要照抄进日记）：\n${value.facts || '（今天没有素材）'}`)
+        }
+        return [{ type: 'text', text: parts.join('\n') }]
+      },
     },
     execute(args) {
       if (String(args.date || '').trim() === 'list') {
@@ -185,20 +198,22 @@ export async function apply(ctx) {
       const day = String(args.date || '').trim()
       const date = day ? new Date(`${day}T12:00:00`) : new Date()
       if (Number.isNaN(date.getTime())) throw new Error('日期格式要写成 YYYY-MM-DD')
-      return Promise.resolve({ kind: 'day', date: dateKey(date), text: readDiary(date) })
+      const result = { kind: 'day', date: dateKey(date), text: readDiary(date) }
+      if (args.facts) result.facts = readJournal(date)
+      return Promise.resolve(result)
     },
     presentCall: () => ({ card: 'generic', title: '翻日记', kind: 'other' }),
   }))
 
-  // ── 4. kaka_diary：写手记 ────────────────────────────────────────
+  // ── 4. kaka_diary：写今天的日记 ──────────────────────────────────
   ctx.tools.register(defineTool({
     name: 'kaka_diary',
-    description: '在今天日记的「手记」里写一句自己的话。第一人称、带点情绪，不要写项目路径。',
+    description: '往今天的日记里写一段（第一人称的散文，像真的日记）。不要写时间戳、不要用列表符号、不要复述素材原文。',
     parameters: {
       text: {
         type: 'string',
         required: true,
-        description: '要写进手记的内容，一两句话即可。',
+        description: '日记正文的一段，两三句到两三段都行；像在跟未来的自己说话，可以有情绪。',
       },
     },
     output: {
@@ -210,16 +225,16 @@ export async function apply(ctx) {
           chars: { type: 'integer', required: true },
         },
       },
-      render: (_args, value) => [{ type: 'text', text: `写进 ${value.date} 的手记了（${value.chars} 字符）。` }],
+      render: (_args, value) => [{ type: 'text', text: `写进 ${value.date} 的日记了（${value.chars} 字符）。` }],
     },
     execute(args) {
       const text = String(args.text ?? '').trim()
-      if (!text) throw new Error('手记不能是空的')
+      if (!text) throw new Error('日记不能是空的')
       ensureDirs()
       appendDiaryNote(text)
       return Promise.resolve({ date: dateKey(), chars: text.length })
     },
-    presentCall: () => ({ card: 'generic', title: '写手记', kind: 'other' }),
+    presentCall: () => ({ card: 'generic', title: '写日记', kind: 'other' }),
   }))
 
   // ── 5. kaka_dream：写梦 ──────────────────────────────────────────

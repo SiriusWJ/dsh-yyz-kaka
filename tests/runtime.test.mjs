@@ -77,15 +77,23 @@ test('渲染结果为空时返回空串（用于丢弃空章节）', () => {
   assert.equal(runtime.renderMemoryBlock(), '')
 })
 
-test('日记：流水插在手记之前，手记追加在最后', () => {
-  runtime.appendDiaryFlow('14:32 · 测试一轮')
-  runtime.appendDiaryNote('今天主人让我造的插件跑起来了。')
-  const text = runtime.readDiary()
-  const flowAt = text.indexOf('14:32')
-  const handAt = text.indexOf('## 手记')
-  assert.ok(flowAt > 0, '流水要写进去')
-  assert.ok(handAt > flowAt, '手记标题必须在流水之后')
-  assert.ok(text.indexOf('跑起来了') > handAt, '手记内容在手记标题之后')
+test('日记：只有正文，素材另存', () => {
+  runtime.appendJournalFact('测试一轮 · 3 分钟 · bash')
+  runtime.appendDiaryNote('今天主人让我把插件跑起来了。')
+  runtime.appendDiaryNote('夜里很安静，我把钳子收好。')
+
+  const diary = runtime.readDiary()
+  assert.ok(diary.startsWith('# '), '日记要有日期标题')
+  assert.ok(diary.includes('插件跑起来了'))
+  assert.ok(diary.includes('夜里很安静'))
+  assert.ok(!diary.includes('测试一轮'), '日记正文不能出现素材')
+  assert.ok(!diary.includes('## 流水'), '不应该再有流水小节')
+  assert.ok(!/^\s*-\s/m.test(diary.replace(/^#.*$/gm, '')), '日记正文不应该有列表符号')
+
+  const facts = runtime.readJournal()
+  assert.ok(facts.includes('测试一轮'), '素材要落在 journal')
+  assert.ok(facts.includes('bash'))
+  assert.ok(!diary.includes('bash'), '素材里的工具名不能漏进日记')
 })
 
 test('梦：写入后能被读到，且可以列出', () => {
