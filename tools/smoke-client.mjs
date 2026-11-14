@@ -340,8 +340,11 @@ const settingsMarkup = render(React.createElement(settingsSlot.component, {
   openSession: () => true,
   initialSettings: petSettings,
 }))
-for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'group.data', 'row.petEnabled', 'action.selftest', 'row.diary']) {
+for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'row.moodAuto', 'row.ramble']) {
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
+}
+for (const gone of ['group.data', 'row.petEnabled', 'row.petSize', 'row.dreamCompose', 'action.forceDream', 'action.clearMemory', 'action.selftest']) {
+  if (settingsMarkup.includes(gone)) throw new Error(`设置页不该再有：${gone}`)
 }
 
 // 3b) 画画状态：宠物手握画笔（多一层 svg）

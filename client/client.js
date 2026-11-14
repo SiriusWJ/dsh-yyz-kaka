@@ -1129,14 +1129,6 @@ window.__ModuleLoader__.load({
           error ? h('div', { className: 'dsc-kaka-sub', style: { color: 'var(--dsw-alias-state-error-primary)' } }, '· ' + error) : null),
 
         h(Group, { title: t('group.pet') },
-          h(Row, { label: t('row.petEnabled'), desc: t('row.petEnabled.desc') },
-            h(Switch, { checked: !!settings.pet.enabled, onChange: function (v) { patch('pet', 'enabled', v) } })),
-          h(Row, { label: t('row.petSize') },
-            h(Segmented, {
-              value: settings.pet.size,
-              options: [64, 80, 96, 112].map(function (size) { return { value: size, label: size + 'px' } }),
-              onChange: function (v) { patch('pet', 'size', Number(v)) },
-            })),
           h(Row, { label: t('row.moodAuto'), desc: t('row.moodAuto.desc') },
             h(Switch, { checked: !!settings.pet.moodAuto, onChange: function (v) { patch('pet', 'moodAuto', v) } })),
           h(Row, { label: t('row.ramble'), desc: t('row.ramble.desc') },
@@ -1231,71 +1223,8 @@ window.__ModuleLoader__.load({
               type: 'number', min: 1, max: 8, step: 1,
               className: 'dsc-kaka-num', value: settings.life.idleHours,
               onChange: function (event) { patch('life', 'idleHours', Number(event.target.value) || 3) },
-            })),
-          h(Row, { label: t('row.dreamCompose'), desc: t('row.dreamCompose.desc') },
-            h(Switch, { checked: !!settings.life.dreamCompose, onChange: function (v) { patch('life', 'dreamCompose', v) } }))),
+            }))),
 
-        h(Group, { title: t('group.data') },
-          h(Row, { label: t('row.homeSession'), desc: t('row.homeSession.desc') },
-            h('div', { className: 'dsc-kaka-mono' }, meta && meta.homeSessionId ? meta.homeSessionId : t('common.none')),
-            h('button', {
-              type: 'button',
-              className: 'dsc-kaka-btn',
-              onClick: function () {
-                postJson(API + '/home', {})
-                  .then(function (payload) {
-                    if (!payload || !payload.ok) return
-                    setMeta(function (current) {
-                      return Object.assign({}, current || {}, { homeSessionId: payload.sessionId })
-                    })
-                    if (props.openSession && !props.openSession(payload.sessionId)) {
-                      setError(t('common.error'))
-                    }
-                  })
-                  .catch(function (err) { setError(String(err && err.message || err)) })
-              },
-            }, t('action.openHome'))),
-          h(Row, { label: t('row.diary') },
-            h('div', { className: 'dsc-kaka-seg' },
-              (diaryDays.length ? diaryDays.slice(0, 3) : ['']).map(function (day, index) {
-                return h('button', {
-                  key: day || 'empty',
-                  type: 'button',
-                  'data-active': String(diaryDay) === String(day) ? 'true' : 'false',
-                  onClick: function () { loadDiary(day || '') },
-                }, day || t('action.loadDiary'))
-              }))),
-          diaryText
-            ? h('pre', { className: 'dsc-kaka-diary' }, diaryText)
-            : (diaryDay ? h('pre', { className: 'dsc-kaka-diary' }, t('common.empty')) : null),
-          h(Row, { label: t('action.selftest'), desc: diag || t('row.homeSession.desc') },
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              onClick: runSelftest,
-            }, t('action.selftest')),
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              onClick: function () { postJson(API + '/life/force', { kind: 'ramble' }).catch(function () {}) },
-            }, t('action.ramble'))),
-          h(Row, { label: t('action.forceDream') },
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              onClick: function () { postJson(API + '/life/force', { kind: 'dream' }).catch(function () {}) },
-            }, t('action.forceDream'))),
-          h(Row, { label: t('action.clearMemory') },
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              'data-danger': 'true',
-              'data-pending': confirm === 'memory' ? 'true' : 'false',
-              onClick: function () { doConfirm('memory', function () { postJson(API + '/memory/clear', {}).catch(function () {}) }) },
-            }, confirm === 'memory' ? t('action.confirmClear') : t('action.clearMemory'))),
-          h(Row, { label: t('action.clearDiary') },
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              'data-danger': 'true',
-              'data-pending': confirm === 'diary' ? 'true' : 'false',
-              onClick: function () { doConfirm('diary', function () { postJson(API + '/diary/clear', {}).catch(function () {}) }) },
-            }, confirm === 'diary' ? t('action.confirmClear') : t('action.clearDiary')))),
       )
     }
 
