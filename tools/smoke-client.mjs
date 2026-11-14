@@ -17,8 +17,9 @@ import { readFileSync } from 'node:fs'
 const ELEMENT = Symbol('element')
 
 function createMiniReact() {
-  let hooks = []
-  let cursor = 0
+  let hookStore = new Map()
+  let currentEntry = null
+  let dirty = false
 
   class Component {
     constructor(props) {
@@ -28,7 +29,13 @@ function createMiniReact() {
 
     setState(next) {
       this.state = { ...this.state, ...(typeof next === 'function' ? next(this.state) : next) }
+      dirty = true
     }
+  }
+
+  function slot(index, init) {
+    if (!currentEntry.hooks[index]) currentEntry.hooks[index] = { value: typeof init === 'function' ? init() : init }
+    return currentEntry.hooks[index]
   }
 
   const React = {
@@ -36,83 +43,110 @@ function createMiniReact() {
     Fragment: Symbol('Fragment'),
     createElement(type, props, ...children) {
       const flat = children.flat(Infinity)
-      // React 会把 children 放进 props.children（类组件里 this.props.children 依赖它）
       const merged = flat.length === 0 ? { ...(props || {}) } : { ...(props || {}), children: flat.length === 1 ? flat[0] : flat }
       return { [ELEMENT]: true, type, props: merged, children: flat }
     },
     useState(initial) {
-      const index = cursor++
-      if (!(index in hooks)) hooks[index] = typeof initial === 'function' ? initial() : initial
-      return [hooks[index], () => {}]
+      const index = currentCursor++
+      const cell = slot(index, initial)
+      return [cell.value, function (next) {
+        cell.value = typeof next === 'function' ? next(cell.value) : next
+        dirty = true
+      }]
     },
     useRef(value) {
-      const index = cursor++
-      if (!(index in hooks)) hooks[index] = { current: value }
-      return hooks[index]
+      const index = currentCursor++
+      if (!currentEntry.hooks[index]) currentEntry.hooks[index] = { ref: { current: value } }
+      return currentEntry.hooks[index].ref
     },
-    useEffect() { cursor += 1 },
-    useMemo(factory) { cursor += 1; return factory() },
-    useCallback(fn) { cursor += 1; return fn },
+    useEffect() { currentCursor += 1 },
+    useMemo(factory) { currentCursor += 1; return factory() },
+    useCallback(fn) { currentCursor += 1; return fn },
   }
 
+  let currentCursor = 0
   const clickables = []
 
-  function renderNode(node) {
+  function renderNode(node, path) {
     if (node === null || node === undefined || node === false || node === true) return ''
     if (typeof node === 'string' || typeof node === 'number') return String(node)
-    if (Array.isArray(node)) return node.map(renderNode).join('')
+    if (Array.isArray(node)) return node.map((child, index) => renderNode(child, path + '/' + index)).join('')
     if (!node[ELEMENT]) return ''
 
     const { type, props, children } = node
 
-    if (type === React.Fragment) return children.map(renderNode).join('')
+    if (type === React.Fragment) return children.map((child, index) => renderNode(child, path + '/f' + index)).join('')
 
     if (typeof type === 'function') {
       const isClass = type.prototype && typeof type.prototype.render === 'function'
-      const previousHooks = hooks
-      const previousCursor = cursor
-      hooks = []
-      cursor = 0
+      const previousEntry = currentEntry
+      const previousCursor = currentCursor
+      const key = path + '#' + (type.name || 'anon')
+      if (!hookStore.has(key)) hookStore.set(key, { hooks: [] })
+      currentEntry = hookStore.get(key)
+      currentCursor = 0
       try {
         if (isClass) {
           const instance = new type(props)
           instance.props = props
           if (!instance.state) instance.state = {}
-          return renderNode(instance.render())
+          return renderNode(instance.render(), path + '/c')
         }
-        return renderNode(type({ ...props, children }))
+        return renderNode(type({ ...props, children }), path + '/c')
       } finally {
-        hooks = previousHooks
-        cursor = previousCursor
+        currentEntry = previousEntry
+        currentCursor = previousCursor
       }
     }
 
-    if (typeof props.onClick === 'function') clickables.push({ type: String(type), onClick: props.onClick })
+    if (typeof props.onClick === 'function') clickables.push({ type: String(type), label: props['aria-label'] || '', onClick: props.onClick })
 
-    // 宿主标签：输出 `#tag` + 子节点，属性用 [] 标出来，方便断言
     const attrs = Object.keys(props)
       .filter(key => key !== 'children' && props[key] !== undefined)
       .map(key => {
         const value = props[key]
-        if (typeof value === 'string' || typeof value === 'number') return `${key}=${String(value).slice(0, 60)}`
-        if (typeof value === 'boolean') return `${key}=${value}`
+        if (typeof value === 'string' || typeof value === 'number') return key + '=' + String(value).slice(0, 60)
+        if (typeof value === 'boolean') return key + '=' + value
         return key
       })
-    return `#${String(type)}[${attrs.join('|')}]${children.map(renderNode).join('')}`
+    return '#' + String(type) + '[' + attrs.join('|') + ']' + children.map((child, index) => renderNode(child, path + '/' + index)).join('')
   }
 
+  /** 渲染并允许 setState 触发的重渲染（最多 8 次），返回最终标记与可点元素。 */
   function renderRoot(element) {
-    clickables.length = 0
-    const markup = renderNode(element)
-    return { markup, clickables: clickables.slice() }
+    hookStore = new Map()
+    for (let pass = 0; pass < 8; pass += 1) {
+      clickables.length = 0
+      dirty = false
+      currentEntry = null
+      currentCursor = 0
+      const markup = renderNode(element, 'root')
+      if (!dirty) {
+        return { markup, clickables: clickables.slice(), passes: pass + 1 }
+      }
+    }
+    return { markup: '', clickables: clickables.slice(), passes: 8, overflow: true }
   }
 
-  return { React, render: renderNode, renderRoot }
+  /** 保留 hooks 再渲染一次：模拟「点了按钮之后」。 */
+  function rerender(element) {
+    for (let pass = 0; pass < 8; pass += 1) {
+      clickables.length = 0
+      dirty = false
+      currentEntry = null
+      currentCursor = 0
+      const markup = renderNode(element, 'root')
+      if (!dirty) return { markup, clickables: clickables.slice(), passes: pass + 1 }
+    }
+    return { markup: '', clickables: clickables.slice(), passes: 8, overflow: true }
+  }
+
+  return { React, render: (element) => renderRoot(element).markup, renderRoot, rerender }
 }
 
 // ---------------------------------------------------------------- 浏览器桩
 
-const { React, render, renderRoot } = createMiniReact()
+const { React, render, renderRoot, rerender } = createMiniReact()
 
 const registrations = []
 const injected = []
@@ -317,7 +351,7 @@ const dockSource = render(React.createElement(petSlot.component, {
   initialSettings: petSettings,
   useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['dsc-kaka-dock', 'dsc-kaka-ibtn', 'dsc-kaka-tip', 'dock.about', 'dock.diary', 'dock.memory', 'dock.dream', 'dock.plan']) {
+for (const key of ['dsc-kaka-dock', 'dsc-kaka-ibtn', 'dsc-kaka-tip', 'dock.about', 'dock.plan', 'dock.memory']) {
   if (!dockSource.includes(key)) throw new Error('图标坞缺少：' + key)
 }
 
@@ -341,6 +375,21 @@ for (const key of ['dsc-kaka-hero', 'dsc-kaka-halo', 'dsc-kaka-name', '钳子准
 }
 if (!/11 月 14 日/.test(aboutMarkup)) throw new Error('关于页缺少生日日期')
 
+// 4f) 点一下「关于」图标 → 浮层面板真的出现
+const petElement = React.createElement(petSlot.component, {
+  sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  useSessions: useSessionsFor('kaka'),
+})
+const firstPass = renderRoot(petElement)
+if (firstPass.markup.includes('data-kaka-panel')) throw new Error('默认不应该有面板')
+const aboutButton = firstPass.clickables.find(item => item.label === 'dock.about')
+if (!aboutButton) throw new Error('找不到「关于」按钮（aria-label=dock.about）')
+aboutButton.onClick()
+const secondPass = rerender(petElement)
+if (!secondPass.markup.includes('data-kaka-panel')) throw new Error('点了「关于」之后面板没出现')
+
 // 5) 小本子面板：打开某一页时渲染容器、页签与标题
 const panelMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
@@ -349,7 +398,7 @@ const panelMarkup = render(React.createElement(petSlot.component, {
   initialPanel: 'about',
   useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'panel.close']) {
+for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'dock.memory', 'panel.close']) {
   if (!panelMarkup.includes(key)) throw new Error('小本子面板缺少：' + key)
 }
 

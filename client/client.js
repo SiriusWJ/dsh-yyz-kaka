@@ -452,7 +452,6 @@ window.__ModuleLoader__.load({
       '@keyframes dsc-kaka-sleep{0%,100%{transform:translateY(2px) scale(0.98)}50%{transform:translateY(5px) scale(0.95)}}',
       '@keyframes dsc-kaka-squish{0%{transform:scale(1,1)}40%{transform:scale(1.1,0.88)}100%{transform:scale(1,1)}}',
       '@keyframes dsc-kaka-bubble{0%{opacity:0;transform:translateY(4px) scale(.96)}12%{opacity:1;transform:translateY(0) scale(1)}88%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}',
-      '@media (prefers-reduced-motion: reduce){[data-kaka-pet] img{animation:none !important}[data-kaka-pet] *{transition:none !important}}',
     ].join('')
 
     /** 宠物本体：一张精灵图 + CSS 动效，零外部依赖。 */
@@ -679,6 +678,16 @@ window.__ModuleLoader__.load({
           .catch(function () {})
       }, [sessionId, showBubble, t])
 
+      // 外部也可通过 window 事件打开面板（调试与联动用）
+      useEffect(function () {
+        function onOpen(event) {
+          var part = event && event.detail && event.detail.part
+          setPanel(part === null ? null : (part || 'about'))
+        }
+        window.addEventListener('kaka-panel', onOpen)
+        return function () { window.removeEventListener('kaka-panel', onOpen) }
+      }, [])
+
       // Esc 收起小本子
       useEffect(function () {
         if (!panel) return undefined
@@ -711,10 +720,10 @@ window.__ModuleLoader__.load({
       }
 
       var size = settings.pet.size || 80
-      var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end', gap: 10 }
+      var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end' }
       if (rect) {
-        var left = Math.round(rect.left - size - 14)
-        var top = Math.round(rect.top + rect.height / 2 - size * 0.62)
+        var left = Math.round(rect.left - size - 34)
+        var top = Math.round(rect.top + rect.height / 2 - size * 0.86)
         if (left < 12) left = Math.round(rect.left + 6)
         if (top < 8) top = 8
         style.left = left + 'px'
@@ -727,7 +736,10 @@ window.__ModuleLoader__.load({
       var bubbleKey = PET_BUBBLES[mood] ? t(PET_BUBBLES[mood]) : ''
       var bubbleText = bubble || bubbleKey
 
-      var dockNode = h('div', { className: 'dsc-kaka-dock' },
+      var dockNode = h('div', {
+        className: 'dsc-kaka-dock-wrap',
+        style: { position: 'absolute', left: 0, bottom: 'calc(100% + 6px)' },
+      }, h('div', { className: 'dsc-kaka-dock' },
         DOCK_ITEMS.map(function (item) {
           return h('button', {
             key: item.part,
@@ -738,18 +750,29 @@ window.__ModuleLoader__.load({
               setPanel(function (current) { return current === item.part ? null : item.part })
             },
           }, h(DockIcon, { name: item.icon }), h('span', { className: 'dsc-kaka-tip' }, t(item.label)))
-        }))
+        })))
 
-      var panelNode = panel
-        ? h('div', {
-          style: {
-            position: 'absolute',
-            left: 'calc(100% + 12px)',
-            bottom: 0,
-            zIndex: 41,
-          },
-        }, h(KakaPanel, { t: t, part: panel, onClose: function () { setPanel(null) } }))
-        : null
+      var panelNode = null
+      if (panel) {
+        var viewportWidth = (typeof window !== 'undefined' && window.innerWidth) || 1280
+        var viewportHeight = (typeof window !== 'undefined' && window.innerHeight) || 800
+        var petLeft = parseFloat(style.left) || 12
+        var petTop = parseFloat(style.top) || (viewportHeight - 160)
+        var dockTop = Math.max(60, petTop - 44)
+        var panelLeft = Math.max(8, Math.min(petLeft, viewportWidth - 404 - 12))
+        var panelStyle = {
+          position: 'fixed',
+          zIndex: 70,
+          left: Math.round(panelLeft) + 'px',
+          bottom: Math.round(Math.max(8, viewportHeight - dockTop)) + 'px',
+          maxHeight: Math.round(Math.max(220, dockTop - 12)) + 'px',
+          pointerEvents: 'auto',
+        }
+        panelNode = createPortal(
+          h('div', { style: panelStyle }, h(KakaPanel, { t: t, part: panel, onClose: function () { setPanel(null) } })),
+          document.body,
+        )
+      }
 
       var petNode = h('div', {
         style: style,
@@ -808,13 +831,13 @@ window.__ModuleLoader__.load({
         : null,
       ),
       dockNode,
-      panelNode,
       )
 
       return h(React.Fragment, null,
         h('span', { ref: anchorRef, style: { display: 'inline-block', width: 0, height: 0 } }),
         h('style', null, PET_CSS + PANEL_CSS),
         createPortal(petNode, document.body),
+        panelNode,
       )
     }
 
@@ -1252,16 +1275,16 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-ibtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}',
       '.dsc-kaka-tip{position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;font-size:11.5px;padding:3px 8px;border-radius:7px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}',
       '.dsc-kaka-ibtn:hover .dsc-kaka-tip,.dsc-kaka-ibtn:focus-visible .dsc-kaka-tip{opacity:1;transform:translateY(-50%) translateX(0)}',
-      '.dsc-kaka-dock{display:flex;flex-direction:column;gap:6px;pointer-events:auto;opacity:.8;transition:opacity .18s ease}',
+      '.dsc-kaka-dock{display:flex;flex-direction:row;gap:6px;pointer-events:auto;opacity:.55;transition:opacity .2s ease, transform .2s ease;transform:translateY(2px)}',
+      '.dsc-kaka-dock-wrap:hover .dsc-kaka-dock,.dsc-kaka-dock:hover,.dsc-kaka-dock:focus-within{opacity:1;transform:translateY(0)}',
+      '.dsc-kaka-dock-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}',
       '.dsc-kaka-dock:hover,.dsc-kaka-dock:focus-within{opacity:1}',
     ].join('')
 
     var DOCK_ITEMS = [
       { part: 'about', label: 'dock.about', icon: 'info' },
-      { part: 'diary', label: 'dock.diary', icon: 'book' },
-      { part: 'memory', label: 'dock.memory', icon: 'chip' },
-      { part: 'dream', label: 'dock.dream', icon: 'moon' },
       { part: 'plan', label: 'dock.plan', icon: 'check' },
+      { part: 'memory', label: 'dock.memory', icon: 'book' },
     ]
 
     var DOCK_ICONS = {
@@ -1648,6 +1671,18 @@ window.__ModuleLoader__.load({
         }, function KakaSettingsSlot(props) { return h(PetBoundary, null, h(KakaSettings, props)) })
       })
     }
+
+    // 控制台兜底入口：__DSH_KAKA__.open('about' | 'plan' | 'memory') / close()
+    try {
+      window.__DSH_KAKA__ = {
+        open: function (part) {
+          window.dispatchEvent(new CustomEvent('kaka-panel', { detail: { part: part || 'about' } }))
+        },
+        close: function () {
+          window.dispatchEvent(new CustomEvent('kaka-panel', { detail: { part: null } }))
+        },
+      }
+    } catch (err) { /* ignore */ }
 
     exports.name = PLUGIN_ID
     exports.inject = ['slots']
