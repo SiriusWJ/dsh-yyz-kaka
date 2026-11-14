@@ -64,8 +64,8 @@ window.__ModuleLoader__.load({
         'view.chars': '字符',
         'view.memoryShort': '记忆',
         'view.portrait': '画像',
-        'view.portraitEmpty': '她还没画过主人的样子',
-        'view.portraitHint': '跟她说「画张我」，她就会用画笔把你留下来',
+        'view.portraitEmpty': '她还不怎么了解主人',
+        'view.portraitHint': '跟她聊几句，她会把重要的记在这里',
         'view.portraitNote': '她眼里的主人',
         'view.cloudHint': '出现越多，说明这件事她越在意',
 
@@ -209,8 +209,8 @@ window.__ModuleLoader__.load({
         'view.chars': 'chars',
         'view.memoryShort': 'Memory',
         'view.portrait': 'Portrait',
-        'view.portraitEmpty': "She hasn't drawn you yet",
-        'view.portraitHint': 'Ask her to "draw me" and she will keep you here',
+        'view.portraitEmpty': 'She barely knows you yet',
+        'view.portraitHint': 'Chat with her and she keeps what matters here',
         'view.portraitNote': 'How she sees you',
         'view.cloudHint': 'The bigger, the more she cares',
 
@@ -887,7 +887,7 @@ window.__ModuleLoader__.load({
       var size = 80 // 设置里不再提供尺寸选项，固定 80px
       var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end' }
       if (rect) {
-        var left = Math.round(rect.left - size - 34)
+        var left = Math.round(rect.right + 18) // 站在输入框右侧
         var top = Math.round(rect.top + rect.height / 2 - size * 0.86)
         if (left < 12) left = Math.round(rect.left + 6)
         if (top < 8) top = 8
@@ -1582,7 +1582,6 @@ window.__ModuleLoader__.load({
       var [day, setDay] = useState('')
       var [text, setText] = useState(props.initialText || '')
       var [dayArt, setDayArt] = useState([])
-      var [art, setArt] = useState({ items: [], portrait: null })
       var [plan, setPlan] = useState([])
       var [loading, setLoading] = useState(false)
       var [note, setNote] = useState('')
@@ -1600,11 +1599,7 @@ window.__ModuleLoader__.load({
         getJson(API + '/about')
           .then(function (payload) { if (payload && payload.ok) setAbout(payload) })
           .catch(function (err) { setError(String(err && err.message || err)) })
-        getJson(API + '/art/list')
-          .then(function (payload) {
-            if (payload && payload.ok) setArt({ items: payload.items || [], portrait: payload.portrait || null })
-          })
-          .catch(function () { /* 画册拉不到不影响其它页 */ })
+
       }, [])
 
       useEffect(function () {
@@ -1719,33 +1714,24 @@ window.__ModuleLoader__.load({
             h('img', { src: ASSET, alt: '' }),
             h('div', null, t('plan.empty')))
       } else if (tab === 'user') {
-        // 画像页 = 她画的主人形象 + USER.md 里的文字记忆（两者可以只有一样）
+        // 画像页 = USER.md 的文字记忆（不再显示图片）
         var userBlocks = text ? parseMemory(text) : []
-        body = h('div', null,
-          art.portrait
-            ? h('figure', { className: 'dsc-kaka-portrait' },
-              h('img', { src: art.portrait.url, alt: art.portrait.title }),
-              h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)),
-              h('figcaption', { style: { opacity: .7 } }, t('view.portraitNote')))
-            : (userBlocks.length
-              ? null
-              : h('div', { className: 'dsc-kaka-portrait-empty' },
-                h('img', { src: ASSET, alt: '' }),
-                h('div', null, t('view.portraitEmpty')),
-                h('div', { style: { opacity: .75 } }, t('view.portraitHint')))),
-          userBlocks.length
-            ? h('div', { style: { marginTop: art.portrait ? 12 : 0 } },
-              h('div', { className: 'dsc-kaka-prose' }, userBlocks.map(function (block, index) {
-                var key = 'u' + index
-                if (block.type === 'heading') return h('h3', { key }, block.text)
-                if (block.type === 'list') {
-                  return h('ul', { key }, block.items.map(function (item, itemIndex) {
-                    return h('li', { key: key + '-' + itemIndex }, item)
-                  }))
-                }
-                return h('p', { key }, block.text)
-              })))
-            : null)
+        body = userBlocks.length
+          ? h('div', null,
+            h('div', { className: 'dsc-kaka-prose' }, userBlocks.map(function (block, index) {
+              var key = 'u' + index
+              if (block.type === 'heading') return h('h3', { key }, block.text)
+              if (block.type === 'list') {
+                return h('ul', { key }, block.items.map(function (item, itemIndex) {
+                  return h('li', { key: key + '-' + itemIndex }, item)
+                }))
+              }
+              return h('p', { key }, block.text)
+            })))
+          : h('div', { className: 'dsc-kaka-view-empty' },
+            h('img', { src: ASSET, alt: '' }),
+            h('div', null, t('view.portraitEmpty')),
+            h('div', { style: { opacity: .75 } }, t('view.portraitHint')))
       } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
           h('i', { style: { width: '92%' } }), h('i', { style: { width: '78%' } }), h('i', { style: { width: '64%' } }))

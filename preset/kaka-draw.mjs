@@ -15,7 +15,7 @@ import { saveArt } from '../lib/art-store.mjs'
 export const name = 'kaka-draw'
 export const inject = ['tools', 'systemPrompt']
 
-const KINDS = ['diary', 'user', 'free']
+const KINDS = ['diary', 'free']
 const MAX_CHARS = 40000
 
 /** 画风说明：给模型的硬约束，避免画出跑偏的东西。 */
@@ -26,7 +26,6 @@ const DRAW_GUIDE = `## 你的画笔（kaka_draw）
 **什么时候画**
 - 主人让你画、或者聊天里想"比划一下"（示意图、小图标、心情涂鸦）→ kind=free
 - 写日记时想给这一天留一张小画 → kind=diary（会自动归到当天日记页）
-- 想画主人的样子 → kind=user（会成为你的"主人画像"，一直保存）
 
 **画风（重要）**
 - 扁平、干净、留白多；2～4 个颜色就够，主色参考 #d9482a（橙红）/ #2e2a28（近黑）/ #f4f2ee（米白）
@@ -124,7 +123,7 @@ export async function apply(ctx, config) {
 
   ctx.tools.register(defineTool({
     name: 'kaka_draw',
-    description: '画一张 SVG（图标、示意图、涂鸦、主人画像、日记插画都行）。画完把返回的 markdown 原样放进回复里，主人才能看到。',
+    description: '画一张 SVG（图标、示意图、涂鸦、日记插画都行）。画完把返回的 markdown 原样放进回复里，主人才能看到。',
     parameters: {
       svg: {
         type: 'string',
@@ -139,7 +138,7 @@ export async function apply(ctx, config) {
       kind: {
         type: 'string',
         enum: KINDS,
-        description: 'diary=当天日记插画；user=主人画像；free=随便画的。默认 free。',
+        description: 'diary=当天日记插画；free=随便画的。默认 free。',
       },
       date: {
         type: 'string',
