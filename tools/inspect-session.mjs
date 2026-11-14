@@ -38,6 +38,19 @@ function findNewestSession() {
   return candidates[0]
 }
 
+/** 按会话 id 找目录（会话 id 形如 session-xxxxxxxx-...）。 */
+function findBySessionId(sessionId) {
+  const root = join(DSH_HOME, 'sessions')
+  for (const workspace of readdirSync(root)) {
+    const file = join(root, workspace, sessionId, 'session.v4.jsonl.zstd')
+    try {
+      statSync(file)
+      return { file, workspace }
+    } catch { /* 继续找 */ }
+  }
+  return null
+}
+
 /**
  * 解压整份会话日志。
  *
@@ -95,7 +108,9 @@ function textOf(message) {
 async function main() {
   const explicit = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : ''
   const target = explicit
-    ? { file: join(explicit, 'session.v4.jsonl.zstd'), workspace: '(explicit)' }
+    ? (explicit.startsWith('session-')
+      ? findBySessionId(explicit)
+      : { file: join(explicit, 'session.v4.jsonl.zstd'), workspace: '(explicit)' })
     : findNewestSession()
 
   if (!target) {
