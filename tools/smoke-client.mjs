@@ -391,6 +391,17 @@ const secondPass = rerender(petElement)
 if (!secondPass.markup.includes('data-kaka-panel')) throw new Error('点了入口按钮之后面板没出现')
 if (!secondPass.markup.includes('dsc-kaka-panel-foot')) throw new Error('面板缺少底部状态条')
 
+// 4g) 面板里的「设置」分区：能从宠物旁直接进设置
+const settingsInPanel = render(React.createElement(petSlot.component, {
+  sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  initialPanel: 'settings',
+  useSessions: useSessionsFor('kaka'),
+}))
+if (!settingsInPanel.includes('data-kaka-panel')) throw new Error('设置分区没渲染出面板')
+if (!settingsInPanel.includes('dsc-kaka-settings')) throw new Error('设置分区没渲染出设置页')
+
 // 5) 小本子面板：打开某一页时渲染容器、页签与标题
 const panelMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
@@ -399,7 +410,7 @@ const panelMarkup = render(React.createElement(petSlot.component, {
   initialPanel: 'memory',
   useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'dock.memory', 'panel.close', 'view.diary', 'view.memoryShort', 'view.portrait']) {
+for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'dock.memory', 'dock.settings', 'panel.close', 'view.diary', 'view.memoryShort', 'view.portrait']) {
   if (!panelMarkup.includes(key)) throw new Error('小本子面板缺少：' + key)
 }
 

@@ -70,6 +70,7 @@ window.__ModuleLoader__.load({
 
         'about.tab': '关于',
         'dock.open': '咔咔的小本子',
+        'dock.settings': '设置',
         'dock.about': '关于咔咔',
         'dock.memory': '记忆',
         'dock.plan': '事项',
@@ -210,6 +211,7 @@ window.__ModuleLoader__.load({
 
         'about.tab': 'About',
         'dock.open': "Kaka's notebook",
+        'dock.settings': 'Settings',
         'dock.about': 'About her',
         'dock.memory': 'Memory',
         'dock.plan': 'Schedule',
@@ -1541,7 +1543,7 @@ window.__ModuleLoader__.load({
     function KakaPanel(props) {
       var t = props.t
       var initialPart = props.part || 'about'
-      var [section, setSection] = useState(initialPart === 'plan' || initialPart === 'memory' ? initialPart : 'about')
+      var [section, setSection] = useState(['plan', 'memory', 'settings'].includes(initialPart) ? initialPart : 'about')
       var [tab, setTab] = useState('diary')
       var [meta, setMeta] = useState(null)
       var [about, setAbout] = useState(null)
@@ -1555,7 +1557,7 @@ window.__ModuleLoader__.load({
       var [error, setError] = useState('')
 
       useEffect(function () {
-        var next = initialPart === 'plan' || initialPart === 'memory' ? initialPart : 'about'
+        var next = ['plan', 'memory', 'settings'].includes(initialPart) ? initialPart : 'about'
         setSection(next)
       }, [initialPart])
 
@@ -1631,6 +1633,7 @@ window.__ModuleLoader__.load({
         about: t('dock.about'),
         plan: t('dock.plan'),
         memory: t('dock.memory'),
+        settings: t('dock.settings'),
       }
 
       var tabs = [
@@ -1670,7 +1673,9 @@ window.__ModuleLoader__.load({
       }
 
       var body
-      if (section === 'about') {
+      if (section === 'settings') {
+        body = h(KakaSettings, { t: t, openSession: props.openSession, compact: true })
+      } else if (section === 'about') {
         body = h(KakaAbout, { t: t, data: about })
       } else if (section === 'plan') {
         body = plan.length
@@ -1767,6 +1772,7 @@ window.__ModuleLoader__.load({
           { value: 'about', label: t('dock.about') },
           { value: 'plan', label: t('dock.plan') },
           { value: 'memory', label: t('dock.memory') },
+          { value: 'settings', label: t('dock.settings') },
         ].map(function (item) {
           return h('button', {
             key: item.value,
@@ -1811,7 +1817,7 @@ window.__ModuleLoader__.load({
           name: 'conversation.input.overlay',
           id: PLUGIN_ID + '-pet',
           order: 5,
-          inject: function () { return { t: t } },
+          inject: function () { return { t: t, openSession: openSessionById } },
         }, function KakaPetSlot(props) { return h(PetBoundary, null, h(KakaPet, props)) })
       })
 
