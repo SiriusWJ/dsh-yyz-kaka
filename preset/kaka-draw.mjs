@@ -6,6 +6,8 @@
  * `api/file?path=…` 显示，所以聊天里能直接看到成品，面板里也能翻。
  */
 
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { loadDshPackage } from '../lib/dsh-modules.js'
 import { log } from '../lib/runtime.js'
 import { saveArt } from '../lib/art-store.mjs'
@@ -121,13 +123,29 @@ export async function apply(ctx, config) {
         session: exec?.agent?.id || '',
       })
       log('画了一张', saved.id, saved.kind, saved.title)
+
+      // 聊天里显示：宿主的 api/file 对 ~/.dsh 下的文件会拒（实测空白），
+      // 而工作区里的普通目录能正常渲染。所以额外在工作区写一份给聊天用。
+      // 目录名不带点：点开头的目录会被当隐藏路径跳过。
+      const cwd = exec?.cwd || exec?.session?.cwd || exec?.agent?.cwd || process.cwd()
+      let displayPath = saved.file
+      try {
+        const dir = join(cwd, 'kaka-art')
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+        const copy = join(dir, basename(saved.file))
+        writeFileSync(copy, svg, 'utf8')
+        displayPath = copy
+      } catch (err) {
+        log('工作区副本失败，退回数据目录', err?.message || err)
+      }
+      const chatMarkdown = `![${saved.title}](${displayPath})`
       return {
         ok: true,
         id: saved.id,
         kind: saved.kind,
         title: saved.title,
         url: saved.url,
-        markdown: saved.markdown,
+        markdown: chatMarkdown,
         chars: svg.length,
       }
     },
