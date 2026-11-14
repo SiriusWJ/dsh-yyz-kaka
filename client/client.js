@@ -1410,7 +1410,7 @@ window.__ModuleLoader__.load({
       '@keyframes dsc-kaka-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}',
       /* ── 画像 ── */
       '.dsc-kaka-portrait{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 2px}',
-      '.dsc-kaka-portrait img{width:100%;max-width:250px;border-radius:14px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);box-shadow:0 8px 22px rgba(0,0,0,.14)}',
+      '.dsc-kaka-portrait img{width:100%;max-width:250px;object-fit:contain;border-radius:14px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);box-shadow:0 8px 22px rgba(0,0,0,.14)}',
       '.dsc-kaka-portrait figcaption{font-size:11px;color:var(--dsw-alias-label-secondary)}',
       '.dsc-kaka-portrait-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 0;color:var(--dsw-alias-label-secondary);font-size:12px;text-align:center}',
       '.dsc-kaka-portrait-empty img{width:56px;height:56px;opacity:.4}',

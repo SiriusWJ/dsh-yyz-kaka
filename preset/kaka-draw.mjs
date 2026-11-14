@@ -77,9 +77,27 @@ function findEdge() {
  * 把 SVG 文件栅格化成 PNG。聊天里的本地图片只有 PNG 这类位图稳定，SVG 时常空白。
  * @returns {string|null} PNG 路径；失败返回 null。
  */
-function rasterize(svgPath, pngPath) {
+/** 从 SVG 源码里读出画布尺寸（优先 viewBox，其次 width/height），默认 320×240。 */
+function canvasSize(svgText) {
+  const viewBox = /viewBox\s*=\s*["']([^"']+)["']/iu.exec(String(svgText || ''))
+  if (viewBox) {
+    const parts = viewBox[1].trim().split(/[\s,]+/u).map(Number)
+    if (parts.length === 4 && parts.every(Number.isFinite) && parts[2] > 0 && parts[3] > 0) {
+      return { width: Math.round(parts[2]), height: Math.round(parts[3]) }
+    }
+  }
+  return { width: 320, height: 240 }
+}
+
+/**
+ * 把 SVG 文件栅格化成 PNG。
+ * 窗口尺寸按画布来——否则 Edge 会截整个视口，图只占左上角，剩下的全是透明留白。
+ * @returns {string|null} PNG 路径；失败返回 null。
+ */
+function rasterize(svgPath, pngPath, size) {
   const edge = findEdge()
   if (!edge) return null
+  const canvas = size || { width: 320, height: 240 }
   const fileUrl = `file:///${svgPath.replace(/\\/gu, "/")}`
   const result = spawnSync(edge, [
     '--headless=new',
@@ -87,7 +105,7 @@ function rasterize(svgPath, pngPath) {
     '--hide-scrollbars',
     '--force-device-scale-factor=2',
     '--default-background-color=00000000',
-    '--window-size=640,480',
+    `--window-size=${canvas.width},${canvas.height}`,
     `--screenshot=${pngPath}`,
     fileUrl,
   ], { timeout: 20000, windowsHide: true })
@@ -166,7 +184,7 @@ export async function apply(ctx, config) {
       let displayPath = saved.file
       try {
         const pngPath = saved.file.replace(/\.svg$/u, '.png')
-        const png = rasterize(saved.file, pngPath)
+        const png = rasterize(saved.file, pngPath, canvasSize(svg))
         if (png) displayPath = png
         else log('栅格化失败，退回 SVG')
       } catch (err) {
