@@ -730,7 +730,8 @@ window.__ModuleLoader__.load({
       }
 
       var bubbleKey = PET_BUBBLES[mood] ? t(PET_BUBBLES[mood]) : ''
-      var bubbleText = bubble || bubbleKey
+      // 常驻心情文案只在悬停/聚焦时冒头；事件气泡（被摸、冒泡）照常显示
+      var bubbleText = bubble || (hover ? bubbleKey : '')
 
       var dockNode = h('div', {
         className: 'dsc-kaka-dock-wrap',
@@ -801,13 +802,13 @@ window.__ModuleLoader__.load({
         },
       },
       h(PetSprite, { mood: mood, size: size }),
-      bubbleText
+      bubbleText && !panel
         ? h('div', {
           style: {
             position: 'absolute',
-            left: '50%',
-            bottom: 'calc(100% - 6px)',
-            transform: 'translateX(-50%)',
+            left: 0,
+            bottom: 'calc(100% + 44px)',
+            transform: 'translateX(0)',
             maxWidth: 200,
             padding: '6px 10px',
             borderRadius: 12,
