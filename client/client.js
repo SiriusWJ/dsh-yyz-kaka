@@ -451,6 +451,7 @@ window.__ModuleLoader__.load({
       dreaming: 'dsc-kaka-sleep 4.2s ease-in-out infinite',
       sleeping: 'dsc-kaka-sleep 4.6s ease-in-out infinite',
       petted: 'dsc-kaka-squish 0.5s ease-out 2',
+      drawing: 'dsc-kaka-drawbob 1.6s ease-in-out infinite',
     }
 
     var PET_BUBBLES = {
@@ -471,6 +472,8 @@ window.__ModuleLoader__.load({
       '@keyframes dsc-kaka-shake{0%,100%{transform:translateX(-2px) rotate(-2deg)}50%{transform:translateX(2px) rotate(2deg)}}',
       '@keyframes dsc-kaka-sag{0%,100%{transform:translateY(2px) scaleY(0.97)}50%{transform:translateY(4px) scaleY(0.94)}}',
       '@keyframes dsc-kaka-sleep{0%,100%{transform:translateY(2px) scale(0.98)}50%{transform:translateY(5px) scale(0.95)}}',
+      '@keyframes dsc-kaka-drawbob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-2px) rotate(1.5deg)}}',
+      '@keyframes dsc-kaka-pen{0%,100%{transform:rotate(-24deg) translate(0,0)}35%{transform:rotate(-15deg) translate(1.5px,-1.5px)}70%{transform:rotate(-31deg) translate(-1px,1px)}}',
       '@keyframes dsc-kaka-squish{0%{transform:scale(1,1)}40%{transform:scale(1.1,0.88)}100%{transform:scale(1,1)}}',
       '@keyframes dsc-kaka-bubble{0%{opacity:0;transform:translateY(4px) scale(.96)}12%{opacity:1;transform:translateY(0) scale(1)}88%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}',
     ].join('')
@@ -483,7 +486,7 @@ window.__ModuleLoader__.load({
       var filter = mood === 'tired' || mood === 'dreaming' || mood === 'sleeping'
         ? 'saturate(.75) brightness(.92)'
         : 'none'
-      return h('img', {
+      var sprite = h('img', {
         src: ASSET,
         alt: '咔咔',
         draggable: false,
@@ -499,6 +502,41 @@ window.__ModuleLoader__.load({
           imageRendering: '-webkit-optimize-contrast',
         },
       })
+
+      if (mood !== 'drawing') return sprite
+
+      // 画画中：右钳握一支笔，笔尖轻轻画动
+      var penSize = Math.round(size * 0.5)
+      var pen = h('svg', {
+        viewBox: '0 0 40 40',
+        'aria-hidden': 'true',
+        style: {
+          position: 'absolute',
+          right: -Math.round(size * 0.1) + 'px',
+          bottom: -Math.round(size * 0.02) + 'px',
+          width: penSize,
+          height: penSize,
+          transform: 'rotate(-24deg)',
+          transformOrigin: '70% 90%',
+          filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.28))',
+          animation: 'dsc-kaka-pen 1.1s ease-in-out infinite',
+          pointerEvents: 'none',
+        },
+      },
+        h('rect', { x: 17, y: 3, width: 7, height: 23, rx: 3.5, fill: '#d9482a', stroke: '#2e2a28', strokeWidth: 2.2 }),
+        h('rect', { x: 17, y: 8, width: 7, height: 3, fill: '#f4f2ee', opacity: .9 }),
+        h('path', { d: 'M17 26h7l-3.5 9z', fill: '#2e2a28' }),
+        h('circle', { cx: 31, cy: 9, r: 2.2, fill: '#f4b400' }),
+      )
+
+      return h('div', {
+        style: {
+          position: 'relative',
+          width: size,
+          height: size,
+          pointerEvents: 'none',
+        },
+      }, sprite, pen)
     }
 
     /**
@@ -567,7 +605,7 @@ window.__ModuleLoader__.load({
 
       var anchorRef = useRef(null)
       var [rect, setRect] = useState(null)
-      var [mood, setMood] = useState('idle')
+      var [mood, setMood] = useState(props.initialMood || 'idle')
       var [bubble, setBubble] = useState('')
       // initialSettings 只是给渲染测试用的注入口，真实运行时由 /kaka/profile 拉取
       var [settings, setSettings] = useState(props.initialSettings || null)

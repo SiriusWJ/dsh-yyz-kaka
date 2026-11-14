@@ -24,7 +24,7 @@ export const name = 'kaka-voice'
 export const inject = ['tools', 'systemPrompt']
 
 const VOICES = ['stella', 'tide']
-const MOODS = ['idle', 'focus', 'proud', 'worried', 'tired', 'dreaming', 'petted', 'sleeping']
+const MOODS = ['idle', 'focus', 'proud', 'worried', 'tired', 'dreaming', 'petted', 'sleeping', 'drawing']
 const BEEP_KINDS = ['done', 'question', 'error', 'attention', 'pet']
 
 /** 取本会话最后一条助手正文，作为 kaka_say 的默认朗读内容。 */

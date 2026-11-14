@@ -344,6 +344,17 @@ for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'gr
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
 }
 
+// 3b) 画画状态：宠物手握画笔（多一层 svg）
+const drawMarkup = render(React.createElement(petSlot.component, {
+  sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  initialMood: 'drawing',
+  useSessions: useSessionsFor('kaka'),
+}))
+if (!drawMarkup.includes('dsc-kaka-drawbob')) throw new Error('画画状态缺少 body 动画')
+if (!drawMarkup.includes('dsc-kaka-pen')) throw new Error('画画状态缺少画笔')
+
 // 4) 图标坞：五个按钮 + 悬停提示
 const dockSource = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
