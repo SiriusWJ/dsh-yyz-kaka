@@ -27,3 +27,5 @@ tools/_preview-render.png
 *.tgz
 
 tools/_pet-preview.*
+
+tools/_view-preview.*

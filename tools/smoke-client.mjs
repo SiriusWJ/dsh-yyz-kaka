@@ -321,6 +321,50 @@ for (const key of ['dsc-kaka-view', 'view.diary', 'view.dream', 'view.memory']) 
   if (!viewMarkup.includes(key)) throw new Error(`咔咔页签缺少内容：${key}`)
 }
 
+// 4b) 日记排版：日期头 + 首字下沉 + 段落
+const diaryMarkup = render(React.createElement(viewSlot.component, {
+  t,
+  sessionId: 'session-x',
+  initialView: {
+    part: 'diary',
+    meta: { days: ['2026-11-14'], dreams: ['2026-11-13'], memory: { agent: 697, user: 58 } },
+    day: '2026-11-14',
+    text: '第一段日记，今天陪主人干活。\n\n第二段，夜里很安静。',
+  },
+}))
+for (const key of ['dsc-kaka-paper-meta', 'dsc-kaka-paper-date', '11 月 14 日', 'dsc-kaka-lead', '第二段']) {
+  if (!diaryMarkup.includes(key)) throw new Error(`日记排版缺少：${key}`)
+}
+if (!/星期[日一二三四五六]/.test(diaryMarkup)) throw new Error('日记缺少星期显示')
+
+// 4c) 记忆排版：小标题 + 列表
+const memoryMarkup = render(React.createElement(viewSlot.component, {
+  t,
+  sessionId: 'session-x',
+  initialView: {
+    part: 'memory',
+    target: 'agent',
+    meta: { days: [], dreams: [], memory: { agent: 697, user: 58 } },
+    text: '# MEMORY.md · 长期记忆\n\n## 关于我自己\n- [身份] 咔咔\n- [工具观] kaka_memory\n\n一段说明。',
+  },
+}))
+for (const key of ['#h3', '#ul', '#li', '关于我自己', '一段说明。']) {
+  if (!memoryMarkup.includes(key)) throw new Error(`记忆排版缺少：${key}`)
+}
+if (memoryMarkup.includes('# MEMORY.md')) throw new Error('记忆不应把 Markdown 的 # 原样显示')
+
+// 4d) 纯函数：切段、解析、日期格式
+const helpers = exported.__test
+if (!helpers) throw new Error('缺少 __test 纯函数出口')
+const proseParts = helpers.splitProse('a\n\nb\n\n\nc')
+if (JSON.stringify(proseParts) !== JSON.stringify(['a', 'b', 'c'])) throw new Error('splitProse 结果不对：' + JSON.stringify(proseParts))
+const parsed = helpers.parseMemory('## 标题\n- 一\n- 二\n正文')
+if (parsed[0].type !== 'heading' || parsed[1].type !== 'list' || parsed[1].items.length !== 2 || parsed[2].type !== 'p') {
+  throw new Error('parseMemory 结果不对：' + JSON.stringify(parsed))
+}
+if (helpers.formatDayTitle('2026-11-14') !== '11 月 14 日') throw new Error('formatDayTitle 结果不对')
+if (!/^星期[日一二三四五六]$/.test(helpers.weekdayOf('2026-11-14'))) throw new Error('weekdayOf 结果不对')
+
 console.log('注入槽位 :', injected.join(', '))
 console.table(registrations.map(item => ({ slot: item.options.name, id: item.options.id, order: item.options.order })))
 console.log('渲染长度 : idle=%d kaka=%d disabled=%d settings(空)=%d settings(满)=%d',

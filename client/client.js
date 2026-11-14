@@ -61,6 +61,7 @@ window.__ModuleLoader__.load({
         'view.empty': '这里还空着',
         'view.loading': '读取中…',
         'view.hint': '这些都是咔咔自己的小本子，所有咔咔会话共享。',
+        'view.chars': '字符',
         'group.pet': '宠物',
         'group.voice': '嗓子',
         'group.notify': '提示',
@@ -145,6 +146,7 @@ window.__ModuleLoader__.load({
         'view.empty': 'Nothing here yet',
         'view.loading': 'Loading…',
         'view.hint': "Kaka's own notebooks, shared by every Kaka session.",
+        'view.chars': 'chars',
         'group.pet': 'Pet',
         'group.voice': 'Voice',
         'group.notify': 'Notifications',
@@ -1055,23 +1057,99 @@ window.__ModuleLoader__.load({
     var kakaTabOpen = false
 
     var VIEW_CSS = [
-      '.dsc-kaka-view{display:flex;flex-direction:column;gap:12px;padding:18px 22px 30px;min-height:100%;box-sizing:border-box}',
-      '.dsc-kaka-view-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}',
-      '.dsc-kaka-view-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary)}',
-      '.dsc-kaka-view-hint{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-view{display:flex;flex-direction:column;gap:14px;height:100%;width:100%;box-sizing:border-box;padding:20px 24px 8px;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-view-head{display:flex;align-items:center;gap:12px}',
+      '.dsc-kaka-view-avatar{width:38px;height:38px;flex-shrink:0;filter:drop-shadow(0 3px 5px rgba(0,0,0,.18))}',
+      '.dsc-kaka-view-titles{display:flex;flex-direction:column;gap:2px;min-width:0}',
+      '.dsc-kaka-view-title{font-size:15px;font-weight:650;letter-spacing:.01em}',
+      '.dsc-kaka-view-sub{font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-view-tabs{margin-left:auto;display:inline-flex;gap:2px;padding:3px;border-radius:11px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-tab{border:none;background:transparent;padding:5px 13px;border-radius:8px;font-size:12.5px;color:var(--dsw-alias-label-secondary);cursor:pointer;font-family:inherit}',
+      '.dsc-kaka-tab.is-active{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}',
       '.dsc-kaka-view-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
-      '.dsc-kaka-view-body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:21px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:14px 16px;overflow:auto;flex:1;min-height:240px;margin:0;font-family:inherit}',
-      '.dsc-kaka-view-empty{color:var(--dsw-alias-label-secondary);font-size:13px}',
+      '.dsc-kaka-chip{border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);font-size:12px;padding:4px 11px;border-radius:999px;cursor:pointer;font-family:inherit}',
+      '.dsc-kaka-chip.is-active{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);font-weight:600}',
+      '.dsc-kaka-view-count{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-paper{position:relative;flex:1;overflow:auto;width:100%;max-width:860px;margin:0 auto;padding:26px 30px 30px;border-radius:16px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 2px 12px rgba(0,0,0,.06);box-sizing:border-box}',
+      '.dsc-kaka-paper::before{content:"";position:absolute;left:0;top:20px;bottom:20px;width:2px;border-radius:2px;background:var(--dsw-alias-brand-primary);opacity:.45}',
+      '.dsc-kaka-paper-meta{display:flex;align-items:baseline;gap:8px;margin:0 0 16px;padding-bottom:12px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-paper-date{font-size:17px;font-weight:650;letter-spacing:.01em}',
+      '.dsc-kaka-paper-week{font-size:11.5px;color:var(--dsw-alias-label-secondary);letter-spacing:.06em}',
+      '.dsc-kaka-prose p{margin:0 0 1.05em;font-size:13.5px;line-height:1.95;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-prose p:last-child{margin-bottom:0}',
+      '.dsc-kaka-prose p.dsc-kaka-lead::first-letter{font-size:1.5em;font-weight:600;color:var(--dsw-alias-brand-primary)}',
+      '.dsc-kaka-prose h3{margin:18px 0 8px;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--dsw-alias-brand-primary);opacity:.9}',
+      '.dsc-kaka-prose h3:first-child{margin-top:0}',
+      '.dsc-kaka-prose ul{margin:0 0 1em;padding-left:18px}',
+      '.dsc-kaka-prose li{font-size:13px;line-height:1.85;margin:0 0 .35em;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-view-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:240px;color:var(--dsw-alias-label-secondary);font-size:12.5px}',
+      '.dsc-kaka-view-empty img{width:64px;height:64px;opacity:.42}',
+      '.dsc-kaka-skel{display:flex;flex-direction:column;gap:13px;padding:8px 2px}',
+      '.dsc-kaka-skel i{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,var(--dsw-alias-bg-layer-2) 25%,var(--dsw-alias-border-l1) 50%,var(--dsw-alias-bg-layer-2) 75%);background-size:200% 100%;animation:dsc-kaka-shimmer 1.4s linear infinite}',
+      '@keyframes dsc-kaka-shimmer{0%{background-position:180% 0}100%{background-position:-80% 0}}',
     ].join('')
+
+    var WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+    /** 'YYYY-MM-DD' → '11 月 14 日'。 */
+    function formatDayTitle(day) {
+      var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ''))
+      if (!match) return day || ''
+      return Number(match[2]) + ' 月 ' + Number(match[3]) + ' 日'
+    }
+
+    /** 'YYYY-MM-DD' → '星期五'。 */
+    function weekdayOf(day) {
+      var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ''))
+      if (!match) return ''
+      var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0)
+      return WEEKDAYS[date.getDay()] || ''
+    }
+
+    /** 日记/梦正文：按空行切段。 */
+    function splitProse(text) {
+      return String(text || '')
+        .split(/\n{2,}/)
+        .map(part => part.trim())
+        .filter(Boolean)
+    }
+
+    /** 记忆正文：把 Markdown 的标题/列表/段落转成渲染块。 */
+    function parseMemory(text) {
+      var blocks = []
+      var list = null
+      for (var raw of String(text || '').split('\n')) {
+        var line = raw.replace(/\s+$/, '')
+        if (!line.trim()) { list = null; continue }
+        var heading = /^#{1,4}\s+(.*)$/.exec(line)
+        if (heading) {
+          list = null
+          blocks.push({ type: 'heading', text: heading[1].trim() })
+          continue
+        }
+        var bullet = /^\s*[-*]\s+(.*)$/.exec(line)
+        if (bullet) {
+          if (!list) { list = { type: 'list', items: [] }; blocks.push(list) }
+          list.items.push(bullet[1].trim())
+          continue
+        }
+        list = null
+        blocks.push({ type: 'p', text: line.trim() })
+      }
+      return blocks
+    }
 
     /** 对话区里的「咔咔」页签：日记 / 梦 / 记忆。 */
     function KakaView(props) {
       var t = props.t
-      var [part, setPart] = useState('diary')
-      var [meta, setMeta] = useState(null)
-      var [day, setDay] = useState('')
-      var [target, setTarget] = useState('agent')
-      var [text, setText] = useState('')
+      // initialView 是渲染测试的注入口；真实运行全靠下面的 effect 拉取
+      var seed = props.initialView || {}
+      var [part, setPart] = useState(seed.part || 'diary')
+      var [meta, setMeta] = useState(seed.meta || null)
+      var [day, setDay] = useState(seed.day || '')
+      var [target, setTarget] = useState(seed.target || 'agent')
+      var [text, setText] = useState(seed.text || '')
+      var [loading, setLoading] = useState(false)
       var [error, setError] = useState('')
 
       useEffect(function () {
@@ -1079,25 +1157,28 @@ window.__ModuleLoader__.load({
         return function () { kakaTabOpen = false }
       }, [])
 
-      useEffect(function () {
+      var loadMeta = useCallback(function () {
         getJson(API + '/view?part=meta')
           .then(function (payload) { if (payload && payload.ok) setMeta(payload) })
           .catch(function (err) { setError(String(err && err.message || err)) })
       }, [])
+
+      useEffect(function () { loadMeta() }, [loadMeta])
 
       useEffect(function () {
         var cancelled = false
         setError('')
 
         if (part === 'memory') {
-          setText(t('view.loading'))
+          setLoading(true)
           getJson(API + '/view?part=memory&target=' + encodeURIComponent(target))
             .then(function (payload) {
               if (cancelled) return
-              if (payload && payload.ok) setText(payload.text || '')
-              else setError(String(payload && payload.error || 'load failed'))
+              setText(payload && payload.ok ? (payload.text || '') : '')
+              if (!payload || !payload.ok) setError(String(payload && payload.error || 'load failed'))
             })
             .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
+            .then(function () { if (!cancelled) setLoading(false) })
           return function () { cancelled = true }
         }
 
@@ -1108,14 +1189,15 @@ window.__ModuleLoader__.load({
           return function () { cancelled = true }
         }
         if (selected !== day) setDay(selected)
-        setText(t('view.loading'))
+        setLoading(true)
         getJson(API + '/view?part=' + part + '&date=' + encodeURIComponent(selected))
           .then(function (payload) {
             if (cancelled) return
-            if (payload && payload.ok) setText(payload.text || '')
-            else setError(String(payload && payload.error || 'load failed'))
+            setText(payload && payload.ok ? (payload.text || '') : '')
+            if (!payload || !payload.ok) setError(String(payload && payload.error || 'load failed'))
           })
           .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
+          .then(function () { if (!cancelled) setLoading(false) })
         return function () { cancelled = true }
       }, [part, day, target, meta, t])
 
@@ -1126,6 +1208,7 @@ window.__ModuleLoader__.load({
       ]
 
       var chips
+      var countLabel = ''
       if (part === 'memory') {
         chips = [
           { value: 'agent', label: t('view.agent') },
@@ -1134,45 +1217,93 @@ window.__ModuleLoader__.load({
           return h('button', {
             key: item.value,
             type: 'button',
-            className: 'dsc-kaka-btn',
-            'data-active': target === item.value ? 'true' : 'false',
-            style: target === item.value
-              ? { background: 'var(--dsw-alias-bg-layer-2)', fontWeight: 600 }
-              : undefined,
+            className: 'dsc-kaka-chip' + (target === item.value ? ' is-active' : ''),
             onClick: function () { setTarget(item.value) },
           }, item.label)
         })
+        if (meta && meta.memory) {
+          countLabel = (target === 'user' ? meta.memory.user : meta.memory.agent) + ' ' + t('view.chars')
+        }
       } else {
         var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
         chips = days.map(function (item) {
           return h('button', {
             key: item,
             type: 'button',
-            className: 'dsc-kaka-btn',
-            style: day === item
-              ? { background: 'var(--dsw-alias-bg-layer-2)', fontWeight: 600 }
-              : undefined,
+            className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
             onClick: function () { setDay(item) },
           }, item)
         })
       }
 
+      var headerSub = meta
+        ? [t('view.diary') + ' ' + (meta.days || []).length, t('view.dream') + ' ' + (meta.dreams || []).length]
+          .join(' · ')
+        : t('view.loading')
+
+      var body
+      if (loading) {
+        body = h('div', { className: 'dsc-kaka-skel' },
+          h('i', { style: { width: '92%' } }),
+          h('i', { style: { width: '86%' } }),
+          h('i', { style: { width: '64%' } }),
+          h('i', { style: { width: '78%' } }))
+      } else if (!text) {
+        body = h('div', { className: 'dsc-kaka-view-empty' },
+          h('img', { src: ASSET, alt: '' }),
+          h('div', null, t('view.empty')))
+      } else if (part === 'memory') {
+        var blocks = parseMemory(text)
+        body = h('div', { className: 'dsc-kaka-prose' }, blocks.map(function (block, index) {
+          var key = 'b' + index
+          if (block.type === 'heading') return h('h3', { key }, block.text)
+          if (block.type === 'list') {
+            return h('ul', { key }, block.items.map(function (item, itemIndex) {
+              return h('li', { key: key + '-' + itemIndex }, item)
+            }))
+          }
+          return h('p', { key }, block.text)
+        }))
+      } else {
+        var paragraphs = splitProse(text)
+        body = h('div', { className: 'dsc-kaka-prose' }, paragraphs.map(function (paragraph, index) {
+          return h('p', {
+            key: 'p' + index,
+            className: index === 0 ? 'dsc-kaka-lead' : undefined,
+          }, paragraph)
+        }))
+      }
+
+      var selectedDay = part === 'memory' ? '' : (day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || '')
+
       return h('div', { className: 'dsc-kaka-view' },
         h('style', null, VIEW_CSS),
         h('div', { className: 'dsc-kaka-view-head' },
-          h('div', { className: 'dsc-kaka-view-title' }, t('view.title')),
-          h(Segmented, {
-            value: part,
-            options: parts,
-            onChange: function (value) { setPart(value); setDay('') },
-          })),
-        h('div', { className: 'dsc-kaka-view-hint' }, t('view.hint')),
-        chips && chips.length ? h('div', { className: 'dsc-kaka-view-chips' }, chips) : null,
+          h('img', { className: 'dsc-kaka-view-avatar', src: ASSET, alt: '' }),
+          h('div', { className: 'dsc-kaka-view-titles' },
+            h('div', { className: 'dsc-kaka-view-title' }, t('view.title')),
+            h('div', { className: 'dsc-kaka-view-sub' }, headerSub)),
+          h('div', { className: 'dsc-kaka-view-tabs' }, parts.map(function (item) {
+            return h('button', {
+              key: item.value,
+              type: 'button',
+              className: 'dsc-kaka-tab' + (part === item.value ? ' is-active' : ''),
+              onClick: function () { setPart(item.value); setDay('') },
+            }, item.label)
+          }))),
+        h('div', { className: 'dsc-kaka-view-chips' },
+          chips,
+          countLabel ? h('span', { className: 'dsc-kaka-view-count' }, countLabel) : null),
         error
           ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error)
           : null,
-        h('pre', { className: 'dsc-kaka-view-body' },
-          text || h('span', { className: 'dsc-kaka-view-empty' }, t('view.empty'))),
+        h('article', { className: 'dsc-kaka-paper' },
+          selectedDay
+            ? h('div', { className: 'dsc-kaka-paper-meta' },
+              h('span', { className: 'dsc-kaka-paper-date' }, formatDayTitle(selectedDay)),
+              h('span', { className: 'dsc-kaka-paper-week' }, weekdayOf(selectedDay)))
+            : null,
+          body),
       )
     }
 
@@ -1231,6 +1362,8 @@ window.__ModuleLoader__.load({
     exports.name = PLUGIN_ID
     exports.inject = ['slots']
     exports.apply = apply
+    // 给渲染测试用的纯函数（不参与真实运行）
+    exports.__test = { splitProse: splitProse, parseMemory: parseMemory, formatDayTitle: formatDayTitle, weekdayOf: weekdayOf }
     return module.exports
   },
 })
