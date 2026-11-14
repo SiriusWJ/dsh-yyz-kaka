@@ -801,7 +801,7 @@ window.__ModuleLoader__.load({
         return h('span', { ref: anchorRef, style: { display: 'inline-block', width: 0, height: 0 } })
       }
 
-      var size = settings.pet.size || 80
+      var size = 80 // 设置里不再提供尺寸选项，固定 80px
       var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end' }
       if (rect) {
         var left = Math.round(rect.left - size - 34)
