@@ -87,6 +87,9 @@ window.__ModuleLoader__.load({
         'row.dataDir': '数据目录',
         'row.homeSession': '咔咔的家',
         'row.homeSession.desc': '日记与梦投递到这里；第一次需要时会自动创建。',
+        'action.openHome': '去她家看看',
+        'action.forceDream': '立刻做个梦',
+        'action.ramble': '让她冒个泡',
         'action.test': '试听',
         'action.testBeep': '听提示音',
         'action.clearAudio': '清空语音缓存',
@@ -154,6 +157,9 @@ window.__ModuleLoader__.load({
         'row.dataDir': 'Data directory',
         'row.homeSession': "Kaka's home",
         'row.homeSession.desc': 'Diary and dreams are delivered here; created on demand.',
+        'action.openHome': 'Open her home',
+        'action.forceDream': 'Dream now',
+        'action.ramble': 'Say something',
         'action.test': 'Test',
         'action.testBeep': 'Test sound',
         'action.clearAudio': 'Clear audio cache',
@@ -845,7 +851,33 @@ window.__ModuleLoader__.load({
 
         h(Group, { title: t('group.data') },
           h(Row, { label: t('row.homeSession'), desc: t('row.homeSession.desc') },
-            h('div', { className: 'dsc-kaka-mono' }, meta && meta.homeSessionId ? meta.homeSessionId : t('common.none'))),
+            h('div', { className: 'dsc-kaka-mono' }, meta && meta.homeSessionId ? meta.homeSessionId : t('common.none')),
+            h('button', {
+              type: 'button',
+              className: 'dsc-kaka-btn',
+              onClick: function () {
+                postJson(API + '/home', {})
+                  .then(function (payload) {
+                    if (!payload || !payload.ok) return
+                    setMeta(function (current) {
+                      return Object.assign({}, current || {}, { homeSessionId: payload.sessionId })
+                    })
+                    if (props.openSession && !props.openSession(payload.sessionId)) {
+                      setError(t('common.error'))
+                    }
+                  })
+                  .catch(function (err) { setError(String(err && err.message || err)) })
+              },
+            }, t('action.openHome'))),
+          h(Row, { label: t('action.forceDream') },
+            h('button', {
+              type: 'button', className: 'dsc-kaka-btn',
+              onClick: function () { postJson(API + '/life/force', { kind: 'dream' }).catch(function () {}) },
+            }, t('action.forceDream')),
+            h('button', {
+              type: 'button', className: 'dsc-kaka-btn',
+              onClick: function () { postJson(API + '/life/force', { kind: 'ramble' }).catch(function () {}) },
+            }, t('action.ramble'))),
           h(Row, { label: t('action.clearMemory') },
             h('button', {
               type: 'button', className: 'dsc-kaka-btn',
@@ -869,6 +901,19 @@ window.__ModuleLoader__.load({
       var lang = detectLang(ctx)
       var t = makeT(lang)
 
+      // 打开一个会话（设置页的「去她家看看」）。uiWorkspace 是官方 Client 服务，
+      // 拿不到时按钮会降级为只显示会话 id，不报错。
+      function openSessionById(sessionId) {
+        try {
+          var workspace = ctx.get('uiWorkspace')
+          if (workspace && typeof workspace.openSession === 'function') {
+            workspace.openSession(sessionId)
+            return true
+          }
+        } catch (err) { /* 服务缺席 */ }
+        return false
+      }
+
       // 宠物：只在咔咔会话出现（判定在组件内部，非咔咔会话只留 0 尺寸锚点）
       ctx.slots.inject('conversation.input.overlay', function () {
         return ctx.slots.register({
@@ -886,7 +931,7 @@ window.__ModuleLoader__.load({
           id: 'kaka',
           order: 25,
           label: function () { return t('settings.title') },
-          inject: function () { return { t: t } },
+          inject: function () { return { t: t, openSession: openSessionById } },
         }, KakaSettings)
       })
     }
