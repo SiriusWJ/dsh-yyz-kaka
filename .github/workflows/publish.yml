@@ -1,0 +1,33 @@
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+      - name: Verify syntax
+        run: |
+          node --check lib/index.js
+          node --check lib/runtime.js
+          node --check lib/art-store.mjs
+          node --check preset/kaka-memory.mjs
+          node --check preset/kaka-voice.mjs
+          node --check preset/kaka-draw.mjs
+          node --check client/client.js
+      - name: Pack
+        run: npm pack
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
