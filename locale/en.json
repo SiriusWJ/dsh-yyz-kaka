@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "咔咔 Kaka",
-    "description": "把咔咔这位小螃蟹工作助手装进 DeepSeek Harness：一个独立的人格预设（会屏蔽工作区 AGENTS.md 人设）、跨会话共享的长记忆与主人画像、每天写日记、夜里做梦整理记忆、能开口说话的嗓子（DeepSeek TTS）、输入框旁边的宠物动画，以及一条 5 秒一跳的生命线程（作息、闹钟、随机冒泡）。工具 kaka_memory / kaka_diary / kaka_journal / kaka_dream / kaka_say / kaka_beep / kaka_mood / kaka_remind 只在选中「咔咔」预设的会话里出现。数据保存在 $DSH_HOME/kaka/，卸载插件不会删除；语音按字符计费，默认单条不超过 200 计费字符。",
+    "description": "Kaka, a crab companion for DeepSeek Harness: her own agent preset that never loads workspace AGENTS.md, shared long-term memory and a user portrait across sessions, a daily diary, memory tidying when the night is quiet, a pen that draws SVG (auto-rasterized to 2x PNG and shown inline), crab sounds only (clack, double clack, shell knock, bubble, sand scuttle, chirp — no TTS at all), a pet on the right of the composer that changes mood and holds a pen while drawing, and a 5-second life thread (schedule, alarms, random rambles). kaka_memory / kaka_diary / kaka_journal / kaka_beep / kaka_mood / kaka_remind / kaka_draw exist only in sessions using the Kaka preset. Data lives in $DSH_HOME/kaka/ and survives uninstall; every sound is synthesized locally in the browser and costs nothing.",
     "detail": "docs/DETAIL.md"
   }
 }

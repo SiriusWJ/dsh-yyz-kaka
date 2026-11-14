@@ -13,6 +13,7 @@ import {
   currentMood,
   getSettings,
   log,
+  pushBubble,
   pushMood,
   scheduleEvent,
 } from '../lib/runtime.js'
@@ -132,13 +133,13 @@ export async function apply(ctx) {
   }))
   ctx.tools.register(defineTool({
     name: 'kaka_mood',
-    description: '切换你此刻的心情与动作，让主人从宠物动画上看出你的状态。可以顺带说一句话。',
+    description: '切换你此刻的心情与动作，让主人从宠物动画上看出你的状态。可以顺带在头顶冒一句话（气泡，不出声）。',
     parameters: {
       mood: {
         type: 'string',
         required: true,
         enum: MOODS,
-        description: 'idle 元气 · focus 专注 · proud 得意 · worried 担心 · tired 疲惫 · dreaming 做梦 · petted 被摸 · sleeping 睡觉。',
+        description: 'idle 元气 · focus 专注 · proud 得意 · worried 担心 · tired 疲惫 · dreaming 入睡整理记忆 · petted 被摸 · sleeping 睡觉。',
       },
       action: {
         type: 'string',
@@ -146,7 +147,7 @@ export async function apply(ctx) {
       },
       speech: {
         type: 'string',
-        description: '可选：顺带念出来的一句话（会调用语音合成并计费）。',
+        description: '可选：顺带在她头顶冒的一句话（纯文字气泡，不出声、不花钱）。',
       },
     },
     output: {
@@ -156,7 +157,6 @@ export async function apply(ctx) {
         properties: {
           mood: { type: 'string', required: true },
           action: { type: 'string', required: true },
-          spoken: { type: 'boolean', required: true },
           note: { type: 'string' },
         },
       },
@@ -165,22 +165,17 @@ export async function apply(ctx) {
         text: `现在是 ${value.mood}${value.action ? `（${value.action}）` : ''}。${value.note || ''}`,
       }],
     },
-    async execute(args, exec) {
+    execute(args, exec) {
       const snapshot = pushMood(args.mood, args.action || '', { session: exec.agent?.id })
-      let spoken = false
       let note = ''
       const speech = String(args.speech ?? '').trim()
       if (speech) {
-        try {
-          await synthesize({ text: speech, signal: exec.signal, session: exec.agent?.id })
-          spoken = true
-        } catch (err) {
-          note = `（想说话但没成功：${err?.message || err}）`
-          log('kaka_mood 顺带说话失败', err?.message || err)
-        }
+        // 没有 TTS：只在头顶冒气泡文字，不出声
+        pushBubble(speech, exec.agent?.id)
+        note = '（头顶冒了一句）'
       }
       // 注意：输出必须是"无损 JSON"——不能带 undefined，否则 DSH 会判 INVALID_TOOL_OUTPUT。
-      const output = { mood: snapshot.name, action: snapshot.action, spoken }
+      const output = { mood: snapshot.name, action: snapshot.action }
       if (note) output.note = note
       return output
     },

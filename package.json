@@ -1,7 +1,7 @@
 {
   "name": "dsh-yyz-kaka",
-  "version": "0.2.0",
-  "description": "咔咔：一只住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格、跨会话共享记忆、日记与画像、会画画、只发螃蟹声、有自己的作息。Kaka is a crab companion for DeepSeek Harness: its own agent preset, shared memory, diary and portrait, a drawing pen, crab sounds instead of a voice, and a life rhythm.",
+  "version": "0.2.1",
+  "description": "咔咔：一只住在 DeepSeek Harness 里的小螃蟹工作助手。独立预设人格（不加载工作区 AGENTS.md）、跨会话共享的记忆与主人画像、日记、画笔（SVG 自动转 PNG）、螃蟹声（没有任何 TTS，只会咔嚓/叩壳/咕噜/吱吱）、输入框旁的宠物与 5 秒生命线程。Kaka is a crab companion for DeepSeek Harness: its own agent preset, shared memory and portrait, a diary, a SVG pen, crab sounds only (no TTS), a desktop pet and a 5-second life thread.",
   "type": "module",
   "main": "lib/index.js",
   "icon": "icon.png",
