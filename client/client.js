@@ -62,6 +62,38 @@ window.__ModuleLoader__.load({
         'view.loading': '读取中…',
         'view.hint': '这些都是咔咔自己的小本子，所有咔咔会话共享。',
         'view.chars': '字符',
+        'about.tab': '关于',
+        'about.companion': '陪伴',
+        'about.companionNote': '从第一次开机算起',
+        'about.birthday': '生日',
+        'about.birthdayNote': '认识主人的第 {n} 天',
+        'about.turns': '对话轮次',
+        'about.turnsNote': '她记得的每一次',
+        'about.memory': '记忆',
+        'about.memoryNote': '长记忆 {a} · 画像 {u}',
+        'about.diary': '日记',
+        'about.diaryNote': '只有她自己的话',
+        'about.dream': '梦',
+        'about.dreamUnit': '篇',
+        'about.dreamNote': '夜里整理出来的',
+        'about.voice': '嗓子',
+        'about.voiceNote': '{c} 计费字符 · {n} 次',
+        'about.mood': '心情',
+        'about.moodNote': '音色 {v}',
+        'about.days': '天',
+        'about.hours': '小时',
+        'about.minutes': '分钟',
+        'about.tagWarm': '热情',
+        'about.tagLoyal': '忠诚',
+        'about.tagHonest': '不编造',
+        'about.footerData': '数据都在 ~/.dsh/kaka',
+        'about.footerShared': '所有咔咔会话共享同一份记忆',
+        'about.footerKeep': '卸载插件不会删除',
+        'mood.idle': '元气', 'mood.focus': '专注', 'mood.proud': '得意', 'mood.worried': '担心',
+        'mood.tired': '疲惫', 'mood.dreaming': '做梦', 'mood.petted': '被摸', 'mood.sleeping': '睡觉',
+        'phase.awake': '清醒', 'phase.quiet': '安静', 'phase.diary': '写日记',
+        'phase.dreaming': '做梦', 'phase.sleeping': '睡觉',
+
         'group.pet': '宠物',
         'group.voice': '嗓子',
         'group.notify': '提示',
@@ -147,6 +179,38 @@ window.__ModuleLoader__.load({
         'view.loading': 'Loading…',
         'view.hint': "Kaka's own notebooks, shared by every Kaka session.",
         'view.chars': 'chars',
+        'about.tab': 'About',
+        'about.companion': 'Together',
+        'about.companionNote': 'Since her first boot',
+        'about.birthday': 'Birthday',
+        'about.birthdayNote': 'Day {n} with you',
+        'about.turns': 'Turns',
+        'about.turnsNote': 'Every one she remembers',
+        'about.memory': 'Memory',
+        'about.memoryNote': 'Long {a} · Profile {u}',
+        'about.diary': 'Journal',
+        'about.diaryNote': 'Only her own words',
+        'about.dream': 'Dreams',
+        'about.dreamUnit': 'night(s)',
+        'about.dreamNote': 'Made at night',
+        'about.voice': 'Voice',
+        'about.voiceNote': '{c} billed chars · {n} calls',
+        'about.mood': 'Mood',
+        'about.moodNote': 'Voice {v}',
+        'about.days': 'd',
+        'about.hours': 'h',
+        'about.minutes': 'min',
+        'about.tagWarm': 'warm',
+        'about.tagLoyal': 'loyal',
+        'about.tagHonest': 'honest',
+        'about.footerData': 'Data lives in ~/.dsh/kaka',
+        'about.footerShared': 'Every Kaka session shares one memory',
+        'about.footerKeep': 'Uninstalling keeps the data',
+        'mood.idle': 'bright', 'mood.focus': 'focused', 'mood.proud': 'proud', 'mood.worried': 'worried',
+        'mood.tired': 'tired', 'mood.dreaming': 'dreaming', 'mood.petted': 'petted', 'mood.sleeping': 'sleeping',
+        'phase.awake': 'awake', 'phase.quiet': 'quiet', 'phase.diary': 'journaling',
+        'phase.dreaming': 'dreaming', 'phase.sleeping': 'sleeping',
+
         'group.pet': 'Pet',
         'group.voice': 'Voice',
         'group.notify': 'Notifications',
@@ -1090,9 +1154,37 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-skel{display:flex;flex-direction:column;gap:13px;padding:8px 2px}',
       '.dsc-kaka-skel i{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,var(--dsw-alias-bg-layer-2) 25%,var(--dsw-alias-border-l1) 50%,var(--dsw-alias-bg-layer-2) 75%);background-size:200% 100%;animation:dsc-kaka-shimmer 1.4s linear infinite}',
       '@keyframes dsc-kaka-shimmer{0%{background-position:180% 0}100%{background-position:-80% 0}}',
+      /* ── 关于咔咔 ── */
+      '.dsc-kaka-hero{display:flex;align-items:center;gap:20px;padding-bottom:18px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-halo{position:relative;width:104px;height:104px;flex-shrink:0;display:grid;place-items:center}',
+      '.dsc-kaka-halo img{position:relative;width:92px;height:92px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.22))}',
+      '.dsc-kaka-halo::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent), transparent 68%)}',
+      '.dsc-kaka-names{display:flex;flex-direction:column;gap:6px;min-width:0}',
+      '.dsc-kaka-name{margin:0;font-size:24px;font-weight:700;letter-spacing:.01em}',
+      '.dsc-kaka-role{font-size:12.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}',
+      '.dsc-kaka-pill{font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-pill.is-brand{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);background:color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent)}',
+      '.dsc-kaka-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(148px, 1fr));gap:10px;margin-top:18px}',
+      '.dsc-kaka-cell{padding:11px 12px;border-radius:12px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-cell-k{font-size:10.5px;letter-spacing:.10em;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-cell-v{font-size:16.5px;font-weight:650;margin-top:5px;white-space:nowrap;letter-spacing:.01em}',
+      '.dsc-kaka-cell-n{font-size:10.5px;line-height:15px;color:var(--dsw-alias-label-secondary);margin-top:2px}',
+      '.dsc-kaka-foot{display:flex;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px dashed var(--dsw-alias-border-l1);font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-foot b{color:var(--dsw-alias-label-primary);font-weight:600}',
     ].join('')
 
     var WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+    var MOOD_KEYS = {
+      idle: 'mood.idle', focus: 'mood.focus', proud: 'mood.proud', worried: 'mood.worried',
+      tired: 'mood.tired', dreaming: 'mood.dreaming', petted: 'mood.petted', sleeping: 'mood.sleeping',
+    }
+
+    var PHASE_KEYS = {
+      awake: 'phase.awake', quiet: 'phase.quiet', diary: 'phase.diary',
+      dreaming: 'phase.dreaming', sleeping: 'phase.sleeping',
+    }
 
     /** 'YYYY-MM-DD' → '11 月 14 日'。 */
     function formatDayTitle(day) {
@@ -1107,6 +1199,23 @@ window.__ModuleLoader__.load({
       if (!match) return ''
       var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0)
       return WEEKDAYS[date.getDay()] || ''
+    }
+
+    /** 时间戳 → '11 月 14 日'。 */
+    function formatBirthday(stamp) {
+      var date = new Date(Number(stamp) || Date.now())
+      return (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日'
+    }
+
+    /** 毫秒 → '1 天 2 小时' / '3 小时 5 分钟' / '5 分钟'。 */
+    function formatDuration(ms, t) {
+      var minutes = Math.max(0, Math.floor(Number(ms || 0) / 60000))
+      var days = Math.floor(minutes / 1440)
+      var hours = Math.floor((minutes % 1440) / 60)
+      var rest = minutes % 60
+      if (days > 0) return days + ' ' + t('about.days') + ' ' + hours + ' ' + t('about.hours')
+      if (hours > 0) return hours + ' ' + t('about.hours') + ' ' + rest + ' ' + t('about.minutes')
+      return rest + ' ' + t('about.minutes')
     }
 
     /** 日记/梦正文：按空行切段。 */
@@ -1142,7 +1251,59 @@ window.__ModuleLoader__.load({
       return blocks
     }
 
-    /** 对话区里的「咔咔」页签：日记 / 梦 / 记忆。 */
+    /** 关于咔咔：头像、身份、生日、陪伴时长与攒下的小统计。 */
+    function KakaAbout(props) {
+      var t = props.t
+      var data = props.data
+      if (!data) {
+        return h('div', { className: 'dsc-kaka-skel' },
+          h('i', { style: { width: '60%' } }),
+          h('i', { style: { width: '92%' } }),
+          h('i', { style: { width: '84%' } }))
+      }
+
+      var stats = data.stats || {}
+      var birthday = Number(data.birthday) || Date.now()
+      var days = Math.max(1, Math.floor((Date.now() - birthday) / 86400000) + 1)
+      var moodLabel = t(MOOD_KEYS[data.mood] || 'mood.idle')
+      var phaseLabel = t(PHASE_KEYS[data.phase] || 'phase.awake')
+
+      var cells = [
+        { k: t('about.companion'), v: formatDuration(data.companionMs, t), n: t('about.companionNote') },
+        { k: t('about.birthday'), v: formatBirthday(birthday), n: t('about.birthdayNote').replace('{n}', String(days)) },
+        { k: t('about.turns'), v: String(stats.turns || 0), n: t('about.turnsNote') },
+        { k: t('about.memory'), v: (stats.memoryChars || 0) + ' ' + t('view.chars'), n: t('about.memoryNote').replace('{a}', String(stats.memoryAgent || 0)).replace('{u}', String(stats.memoryUser || 0)) },
+        { k: t('about.diary'), v: (stats.diaryDays || 0) + ' ' + t('about.days'), n: t('about.diaryNote') },
+        { k: t('about.dream'), v: (stats.dreamCount || 0) + ' ' + t('about.dreamUnit'), n: t('about.dreamNote') },
+        { k: t('about.voice'), v: '¥' + (stats.yuan || 0), n: t('about.voiceNote').replace('{c}', String(stats.billedChars || 0)).replace('{n}', String(stats.voiceCalls || 0)) },
+        { k: t('about.mood'), v: moodLabel + ' · ' + phaseLabel, n: t('about.moodNote').replace('{v}', String(data.voice || '')) },
+      ]
+
+      return h(React.Fragment, null,
+        h('div', { className: 'dsc-kaka-hero' },
+          h('div', { className: 'dsc-kaka-halo' }, h('img', { src: ASSET, alt: '' })),
+          h('div', { className: 'dsc-kaka-names' },
+            h('h1', { className: 'dsc-kaka-name' }, data.name || t('view.title')),
+            h('div', { className: 'dsc-kaka-role' }, (data.species || '') + ' · ' + (data.role || '')),
+            h('div', { className: 'dsc-kaka-pills' },
+              h('span', { className: 'dsc-kaka-pill is-brand' }, '「' + (data.quote || '') + '」'),
+              h('span', { className: 'dsc-kaka-pill' }, t('about.tagWarm')),
+              h('span', { className: 'dsc-kaka-pill' }, t('about.tagLoyal')),
+              h('span', { className: 'dsc-kaka-pill' }, t('about.tagHonest'))))),
+        h('div', { className: 'dsc-kaka-grid' }, cells.map(function (cell, index) {
+          return h('div', { className: 'dsc-kaka-cell', key: 'c' + index },
+            h('div', { className: 'dsc-kaka-cell-k' }, cell.k),
+            h('div', { className: 'dsc-kaka-cell-v' }, cell.v),
+            h('div', { className: 'dsc-kaka-cell-n' }, cell.n))
+        })),
+        h('div', { className: 'dsc-kaka-foot' },
+          h('span', null, t('about.footerData')),
+          h('span', null, t('about.footerShared')),
+          h('span', null, t('about.footerKeep'))),
+      )
+    }
+
+    /** 对话区里的「咔咔」页签：关于 / 日记 / 梦 / 记忆。 */
     function KakaView(props) {
       var t = props.t
       // 双保险：页签由守门组件按预设动态登记，这里再看一眼预设，免得回收延迟时露出空白页
@@ -1155,8 +1316,9 @@ window.__ModuleLoader__.load({
         : undefined
       // initialView 是渲染测试的注入口；真实运行全靠下面的 effect 拉取
       var seed = props.initialView || {}
-      var [part, setPart] = useState(seed.part || 'diary')
+      var [part, setPart] = useState(seed.part || 'about')
       var [meta, setMeta] = useState(seed.meta || null)
+      var [about, setAbout] = useState(seed.about || null)
       var [day, setDay] = useState(seed.day || '')
       var [target, setTarget] = useState(seed.target || 'agent')
       var [text, setText] = useState(seed.text || '')
@@ -1172,11 +1334,16 @@ window.__ModuleLoader__.load({
         getJson(API + '/view?part=meta')
           .then(function (payload) { if (payload && payload.ok) setMeta(payload) })
           .catch(function (err) { setError(String(err && err.message || err)) })
+        getJson(API + '/about')
+          .then(function (payload) { if (payload && payload.ok) setAbout(payload) })
+          .catch(function (err) { setError(String(err && err.message || err)) })
       }, [])
 
       useEffect(function () { loadMeta() }, [loadMeta])
 
       useEffect(function () {
+        if (part === 'about') return function () {}
+
         var cancelled = false
         setError('')
 
@@ -1213,12 +1380,13 @@ window.__ModuleLoader__.load({
       }, [part, day, target, meta, t])
 
       var parts = [
+        { value: 'about', label: t('about.tab') },
         { value: 'diary', label: t('view.diary') },
         { value: 'dream', label: t('view.dream') },
         { value: 'memory', label: t('view.memory') },
       ]
 
-      var chips
+      var chips = null
       var countLabel = ''
       if (part === 'memory') {
         chips = [
@@ -1235,7 +1403,7 @@ window.__ModuleLoader__.load({
         if (meta && meta.memory) {
           countLabel = (target === 'user' ? meta.memory.user : meta.memory.agent) + ' ' + t('view.chars')
         }
-      } else {
+      } else if (part !== 'about') {
         var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
         chips = days.map(function (item) {
           return h('button', {
@@ -1247,13 +1415,14 @@ window.__ModuleLoader__.load({
         })
       }
 
-      var headerSub = meta
-        ? [t('view.diary') + ' ' + (meta.days || []).length, t('view.dream') + ' ' + (meta.dreams || []).length]
-          .join(' · ')
+      var headerSub = about
+        ? (about.species || '') + ' · ' + (about.role || '')
         : t('view.loading')
 
       var body
-      if (loading) {
+      if (part === 'about') {
+        body = h(KakaAbout, { t: t, data: about })
+      } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
           h('i', { style: { width: '92%' } }),
           h('i', { style: { width: '86%' } }),
@@ -1287,7 +1456,9 @@ window.__ModuleLoader__.load({
 
       if (preset !== undefined && preset !== PRESET_ID) return null
 
-      var selectedDay = part === 'memory' ? '' : (day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || '')
+      var selectedDay = part === 'about' || part === 'memory'
+        ? ''
+        : (day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || '')
 
       return h('div', { className: 'dsc-kaka-view' },
         h('style', null, VIEW_CSS),
@@ -1304,9 +1475,11 @@ window.__ModuleLoader__.load({
               onClick: function () { setPart(item.value); setDay('') },
             }, item.label)
           }))),
-        h('div', { className: 'dsc-kaka-view-chips' },
-          chips,
-          countLabel ? h('span', { className: 'dsc-kaka-view-count' }, countLabel) : null),
+        chips && chips.length
+          ? h('div', { className: 'dsc-kaka-view-chips' },
+            chips,
+            countLabel ? h('span', { className: 'dsc-kaka-view-count' }, countLabel) : null)
+          : null,
         error
           ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error)
           : null,

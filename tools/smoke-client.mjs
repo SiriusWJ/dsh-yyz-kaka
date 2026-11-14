@@ -321,9 +321,36 @@ const viewMarkup = render(React.createElement(viewSlot.component, {
   t,
   sessionId: 'session-x',
 }))
-for (const key of ['dsc-kaka-view', 'view.diary', 'view.dream', 'view.memory']) {
+for (const key of ['dsc-kaka-view', 'about.tab', 'view.diary', 'view.dream', 'view.memory']) {
   if (!viewMarkup.includes(key)) throw new Error(`咔咔页签缺少内容：${key}`)
 }
+
+// 4a) 关于页：头像、身份、生日、陪伴、统计卡片
+const aboutMarkup = render(React.createElement(viewSlot.component, {
+  t,
+  sessionId: 'session-x',
+  initialView: {
+    part: 'about',
+    meta: { days: ['2026-11-14'], dreams: [], memory: { agent: 697, user: 58 } },
+    about: {
+      ok: true,
+      name: '咔咔',
+      species: '螃蟹',
+      role: '主人的积极工作助手',
+      quote: '钳子准备好了！',
+      birthday: Date.parse('2026-11-14T08:00:00+08:00'),
+      companionMs: 6300000,
+      stats: { turns: 25, diaryDays: 1, dreamCount: 1, memoryChars: 755, memoryAgent: 697, memoryUser: 58, billedChars: 66, voiceCalls: 4, yuan: 0.0099 },
+      mood: 'idle',
+      phase: 'awake',
+      voice: 'stella',
+    },
+  },
+}))
+for (const key of ['dsc-kaka-hero', 'dsc-kaka-halo', 'dsc-kaka-name', '钳子准备好了', 'about.companion', 'about.birthday', 'about.turns', 'about.memory', 'mood.idle', 'phase.awake']) {
+  if (!aboutMarkup.includes(key)) throw new Error('关于页缺少：' + key)
+}
+if (!/11 月 14 日/.test(aboutMarkup)) throw new Error('关于页缺少生日日期')
 
 // 4b) 日记排版：日期头 + 首字下沉 + 段落
 const diaryMarkup = render(React.createElement(viewSlot.component, {
