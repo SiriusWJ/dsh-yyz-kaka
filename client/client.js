@@ -735,7 +735,7 @@ window.__ModuleLoader__.load({
 
       var dockNode = h('div', {
         className: 'dsc-kaka-dock-wrap',
-        style: { position: 'absolute', left: 0, bottom: 'calc(100% + 6px)' },
+        style: { position: 'absolute', left: 0, top: 'calc(100% + 6px)' },
       }, h('div', { className: 'dsc-kaka-dock' },
         DOCK_ITEMS.map(function (item) {
           return h('button', {
@@ -755,7 +755,7 @@ window.__ModuleLoader__.load({
         var viewportHeight = (typeof window !== 'undefined' && window.innerHeight) || 800
         var petLeft = parseFloat(style.left) || 12
         var petTop = parseFloat(style.top) || (viewportHeight - 160)
-        var dockTop = Math.max(60, petTop - 44)
+        var dockTop = Math.max(60, petTop - 12)
         var panelLeft = Math.max(8, Math.min(petLeft, viewportWidth - 404 - 12))
         var panelStyle = {
           position: 'fixed',
@@ -807,7 +807,7 @@ window.__ModuleLoader__.load({
           style: {
             position: 'absolute',
             left: 0,
-            bottom: 'calc(100% + 44px)',
+            bottom: 'calc(100% + 8px)',
             transform: 'translateX(0)',
             maxWidth: 200,
             padding: '6px 10px',
@@ -1267,12 +1267,12 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-panel-action{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 11px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:11.5px;cursor:pointer;font-family:inherit}',
       '.dsc-kaka-panel-action:hover{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary)}',
       '.dsc-kaka-ibtn{position:relative;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);cursor:pointer;pointer-events:auto;transition:transform .16s cubic-bezier(.2,.8,.3,1),color .16s,border-color .16s,box-shadow .16s;box-shadow:0 2px 6px rgba(0,0,0,.10)}',
-      '.dsc-kaka-ibtn:hover,.dsc-kaka-ibtn:focus-visible{transform:translateY(-2px) scale(1.14);color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);box-shadow:0 6px 14px rgba(0,0,0,.18);outline:none}',
+      '.dsc-kaka-ibtn:hover,.dsc-kaka-ibtn:focus-visible{z-index:6;transform:translateY(-2px) scale(1.14);color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);box-shadow:0 6px 14px rgba(0,0,0,.18);outline:none}',
       '.dsc-kaka-ibtn.is-open{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}',
       '.dsc-kaka-ibtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}',
-      '.dsc-kaka-tip{position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;font-size:11.5px;padding:3px 8px;border-radius:7px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}',
+      '.dsc-kaka-tip{position:absolute;z-index:5;left:calc(100% + 8px);top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;font-size:11.5px;padding:3px 8px;border-radius:7px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}',
       '.dsc-kaka-ibtn:hover .dsc-kaka-tip,.dsc-kaka-ibtn:focus-visible .dsc-kaka-tip{opacity:1;transform:translateY(-50%) translateX(0)}',
-      '.dsc-kaka-dock{display:flex;flex-direction:row;gap:6px;pointer-events:auto;opacity:.55;transition:opacity .2s ease, transform .2s ease;transform:translateY(2px)}',
+      '.dsc-kaka-dock{display:flex;flex-direction:row;gap:6px;pointer-events:auto;opacity:.55;transition:opacity .2s ease, transform .2s ease;transform:translateY(-2px)}',
       '.dsc-kaka-dock-wrap:hover .dsc-kaka-dock,.dsc-kaka-dock:hover,.dsc-kaka-dock:focus-within{opacity:1;transform:translateY(0)}',
       '.dsc-kaka-dock-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}',
       '.dsc-kaka-dock:hover,.dsc-kaka-dock:focus-within{opacity:1}',
