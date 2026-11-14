@@ -6,8 +6,8 @@
  * `api/file?path=…` 显示，所以聊天里能直接看到成品，面板里也能翻。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { loadDshPackage } from '../lib/dsh-modules.js'
 import { log } from '../lib/runtime.js'
 import { saveArt } from '../lib/art-store.mjs'
@@ -58,6 +58,41 @@ function sanitizeSvg(raw) {
   if (!/xmlns=/u.test(head)) svg = svg.replace(/^<svg/iu, '<svg xmlns="http://www.w3.org/2000/svg"')
   if (!/viewBox=/u.test(head)) svg = svg.replace(/^<svg/iu, '<svg viewBox="0 0 320 240" width="320" height="240"')
   return svg
+}
+
+/** 本机 Edge 的常见位置（无头栅格化 SVG → PNG 用）。 */
+const EDGE_CANDIDATES = [
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+]
+
+function findEdge() {
+  for (const candidate of EDGE_CANDIDATES) {
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+/**
+ * 把 SVG 文件栅格化成 PNG。聊天里的本地图片只有 PNG 这类位图稳定，SVG 时常空白。
+ * @returns {string|null} PNG 路径；失败返回 null。
+ */
+function rasterize(svgPath, pngPath) {
+  const edge = findEdge()
+  if (!edge) return null
+  const fileUrl = `file:///${svgPath.replace(/\\/gu, "/")}`
+  const result = spawnSync(edge, [
+    '--headless=new',
+    '--disable-gpu',
+    '--hide-scrollbars',
+    '--force-device-scale-factor=2',
+    '--default-background-color=00000000',
+    '--window-size=640,480',
+    `--screenshot=${pngPath}`,
+    fileUrl,
+  ], { timeout: 20000, windowsHide: true })
+  if (result.error) return null
+  return existsSync(pngPath) ? pngPath : null
 }
 
 export async function apply(ctx, config) {
@@ -127,16 +162,15 @@ export async function apply(ctx, config) {
       // 聊天里显示：宿主的 api/file 对 ~/.dsh 下的文件会拒（实测空白），
       // 而工作区里的普通目录能正常渲染。所以额外在工作区写一份给聊天用。
       // 目录名不带点：点开头的目录会被当隐藏路径跳过。
-      const cwd = exec?.cwd || exec?.session?.cwd || exec?.agent?.cwd || process.cwd()
+      // 聊天里显示：把 SVG 栅格化成 PNG（SVG 路径图在聊天里经常空白，PNG 稳定）
       let displayPath = saved.file
       try {
-        const dir = join(cwd, 'kaka-art')
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-        const copy = join(dir, basename(saved.file))
-        writeFileSync(copy, svg, 'utf8')
-        displayPath = copy
+        const pngPath = saved.file.replace(/\.svg$/u, '.png')
+        const png = rasterize(saved.file, pngPath)
+        if (png) displayPath = png
+        else log('栅格化失败，退回 SVG')
       } catch (err) {
-        log('工作区副本失败，退回数据目录', err?.message || err)
+        log('栅格化异常，退回 SVG', err?.message || err)
       }
       const chatMarkdown = `![${saved.title}](${displayPath})`
       return {
