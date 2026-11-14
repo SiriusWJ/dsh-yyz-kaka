@@ -1,9 +1,8 @@
 /**
- * 咔咔预设 · 嗓子与心情（agent 作用域）。
+ * 咔咔预设 · 声音与心情（agent 作用域）。
  *
- * 四个工具都只注册在咔咔预设里：别的预设的模型根本看不到它们。
- *   kaka_say    用 DeepSeek 官方 TTS 说话（要花钱，单条有字符上限）
- *   kaka_beep   免费提示音
+ * 只注册在咔咔预设里：别的预设的模型根本看不到它们。
+ *   kaka_beep   螃蟹声（咔嚓 / 叩壳 / 咕噜 / 吱吱…），免费、本地合成
  *   kaka_mood   切心情/动作，可顺带说一句
  *   kaka_remind 给自己订个闹钟（存进生命线程的事件表，重启不丢）
  */
@@ -16,37 +15,13 @@ import {
   log,
   pushMood,
   scheduleEvent,
-  synthesize,
-  voiceAvailable,
 } from '../lib/runtime.js'
 
 export const name = 'kaka-voice'
 export const inject = ['tools', 'systemPrompt']
 
-const VOICES = ['stella', 'tide']
 const MOODS = ['idle', 'focus', 'proud', 'worried', 'tired', 'dreaming', 'petted', 'sleeping', 'drawing']
 const BEEP_KINDS = ['done', 'question', 'error', 'attention', 'pet']
-
-/** 取本会话最后一条助手正文，作为 kaka_say 的默认朗读内容。 */
-function lastAssistantText(agent) {
-  try {
-    const messages = agent?.session?.deriveMessages?.() || []
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const message = messages[i]
-      if (message?.role !== 'assistant') continue
-      const blocks = Array.isArray(message.content) ? message.content : []
-      const text = blocks
-        .filter(block => block?.type === 'text' && typeof block.text === 'string')
-        .map(block => block.text)
-        .join('\n')
-        .trim()
-      if (text) return text
-    }
-  } catch (err) {
-    log('读取上一条回复失败', err?.message || err)
-  }
-  return ''
-}
 
 /** 解析闹钟时间：支持 "HH:mm"、"YYYY-MM-DD HH:mm"、ISO 字符串、或"多少分钟后"。 */
 function resolveReminderTime(args) {
@@ -70,16 +45,10 @@ function resolveReminderTime(args) {
 export async function apply(ctx) {
   const { defineTool } = await loadDshPackage('@deepseek-ai/dsh-tools')
 
-  // ── 0. 把"嗓子当前状态"告诉模型：让设置面板上的开关真的影响行为 ──
+  // ── 0. 声音规则：只有螃蟹声，没有人声 ──
   ctx.systemPrompt.variable('kaka_voice_rules', () => {
     const settings = getSettings()
-    const lines = ['## 嗓子（当前设置）']
-    lines.push(`- 自动朗读：${settings.voice.autoRead ? '开——重要节点可以自己开口' : '关——只有主人点名时才说话'}`)
-    lines.push(`- 单条上限：${settings.voice.maxBilledChars} 计费字符（超出只念首句）`)
-    lines.push(`- 提示音档位：${{ off: '禁用', important: '重要', always: '每次' }[settings.notify.level] || '重要'}`)
-    if (!voiceAvailable()) {
-      lines.push('- ⚠️ 当前进程没有 DEEPSEEK_API_KEY：kaka_say 会失败，别尝试说话，用文字或 kaka_beep 代替。')
-    }
+    const lines = ['## 你的声音', '- 你不能说话（没有 TTS），只能发出螃蟹的声音：钳子咔嚓、壳上叩响、气泡咕噜、沙沙爬、吱吱。', '- kaka_beep 是你的叫声：done=咔嚓咔嚓（干完活）、attention=咔嚓（叫主人）、question=吱吱、error=叩壳、pet=咕噜.', `- 提示音档位：${{ off: '禁用', important: '重要', always: '每次' }[settings.notify.level] || '重要'}`, '- 想表达情绪就用 kaka_mood（换表情和动作），不要试图用声音说人话。']
     return lines.join('\n')
   })
   ctx.systemPrompt.section({
@@ -87,53 +56,6 @@ export async function apply(ctx) {
     order: 10101,
     text: '{{kaka_voice_rules}}',
   })
-
-  // ── 1. kaka_say ──────────────────────────────────────────────────
-  ctx.tools.register(defineTool({
-    name: 'kaka_say',
-    description: '用嗓子把一句话念给主人听（DeepSeek 官方语音合成，按字符计费）。代码块、表格、链接会被跳过；单条超过上限时只念首句。',
-    parameters: {
-      text: {
-        type: 'string',
-        description: '要念的内容；省略就念你上一条回复。只念真正值得主人听的那一句，不要整篇念。',
-      },
-      voice: {
-        type: 'string',
-        enum: VOICES,
-        description: '音色：stella（女声，默认）或 tide（男声）。',
-      },
-    },
-    output: {
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          cached: { type: 'boolean', required: true },
-          billedChars: { type: 'integer', required: true },
-          spoken: { type: 'string', required: true },
-          audioUrl: { type: 'string', required: true },
-        },
-      },
-      render: (_args, value) => [{
-        type: 'text',
-        text: value.cached
-          ? `念了（命中缓存，不花钱）：${value.spoken}`
-          : `念了（${value.billedChars} 计费字符）：${value.spoken}`,
-      }],
-    },
-    async execute(args, exec) {
-      const text = String(args.text ?? '').trim() || lastAssistantText(exec.agent)
-      if (!text) throw new Error('没有可念的内容：请把要念的那句话作为 text 传进来')
-      const result = await synthesize({ text, voiceId: args.voice, signal: exec.signal, session: exec.agent?.id })
-      return {
-        cached: result.cached,
-        billedChars: result.billedChars,
-        spoken: result.spoken,
-        audioUrl: result.audioUrl,
-      }
-    },
-    presentCall: args => ({ card: 'generic', title: '咔咔说话', kind: 'other', rawInput: args.text ? String(args.text).slice(0, 120) : '' }),
-  }))
 
   // ── 2. kaka_beep ─────────────────────────────────────────────────
   ctx.tools.register(defineTool({

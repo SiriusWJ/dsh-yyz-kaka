@@ -340,10 +340,10 @@ const settingsMarkup = render(React.createElement(settingsSlot.component, {
   openSession: () => true,
   initialSettings: petSettings,
 }))
-for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'row.moodAuto', 'row.ramble']) {
+for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'row.moodAuto', 'row.ramble', 'row.sfxTest', 'row.volume']) {
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
 }
-for (const gone of ['group.data', 'row.petEnabled', 'row.petSize', 'row.dreamCompose', 'action.forceDream', 'action.clearMemory', 'action.selftest']) {
+for (const gone of ['group.data', 'row.petEnabled', 'row.petSize', 'row.dreamCompose', 'action.forceDream', 'action.clearMemory', 'action.selftest', 'row.voiceId', 'row.autoRead', 'row.maxChars', 'action.clearAudio']) {
   if (settingsMarkup.includes(gone)) throw new Error(`设置页不该再有：${gone}`)
 }
 

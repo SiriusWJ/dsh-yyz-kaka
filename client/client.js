@@ -120,7 +120,7 @@ window.__ModuleLoader__.load({
         'phase.dreaming': '做梦', 'phase.sleeping': '睡觉',
 
         'group.pet': '宠物',
-        'group.voice': '嗓子',
+        'group.voice': '声音',
         'group.notify': '提示',
         'group.life': '作息与记忆',
         'group.data': '数据',
@@ -134,6 +134,9 @@ window.__ModuleLoader__.load({
         'row.voiceId': '音色',
         'row.voiceId.desc': 'DeepSeek 官方 TTS 只有两个音色。',
         'row.volume': '音量',
+        'row.volume.desc': '所有提示音的音量，和系统音量叠加。',
+        'row.sfxTest': '试试声音',
+        'row.sfxTest.desc': '咔嚓、叩壳、咕噜、沙沙爬、吱吱——点一下听听。',
         'row.autoRead': '自动朗读',
         'row.autoRead.desc': '由咔咔自己判断该念哪一句；关掉后只能手动点她。',
         'row.cache': '语音缓存',
@@ -262,7 +265,7 @@ window.__ModuleLoader__.load({
         'phase.dreaming': 'dreaming', 'phase.sleeping': 'sleeping',
 
         'group.pet': 'Pet',
-        'group.voice': 'Voice',
+        'group.voice': 'Sounds',
         'group.notify': 'Notifications',
         'group.life': 'Rhythm & memory',
         'group.data': 'Data',
@@ -276,6 +279,9 @@ window.__ModuleLoader__.load({
         'row.voiceId': 'Voice',
         'row.voiceId.desc': 'DeepSeek TTS ships two voices.',
         'row.volume': 'Volume',
+        'row.volume.desc': 'Volume for every cue, on top of the system volume.',
+        'row.sfxTest': 'Try the sounds',
+        'row.sfxTest.desc': 'Clacks, shell knock, bubble, sand scuttle, chirp.',
         'row.autoRead': 'Auto read',
         'row.autoRead.desc': 'Kaka decides what to say; off means manual only.',
         'row.cache': 'Audio cache',
@@ -368,76 +374,140 @@ window.__ModuleLoader__.load({
       return audioCtx
     }
 
-    var BEEP_TONES = {
-      done: [[660, 0.08], [880, 0.12], [1100, 0.16]],
-      question: [[520, 0.1], [700, 0.12]],
-      error: [[300, 0.14], [200, 0.2]],
-      attention: [[880, 0.1], [880, 0.1]],
-      pet: [[900, 0.05], [1200, 0.06]],
+    /** 螃蟹声：全是"物理声"——钳子咔、壳上叩、气泡、沙沙爬，没有一句人话。 */
+    var SFX = {
+      clack: { label: '咔嚓', play: (ctx, at, vol) => clack(ctx, at, vol, 2) },
+      clack2: { label: '咔嚓咔嚓', play: (ctx, at, vol) => clack(ctx, at, vol, 4) },
+      knock: { label: '叩壳', play: (ctx, at, vol) => knock(ctx, at, vol) },
+      bubble: { label: '咕噜', play: (ctx, at, vol) => bubble(ctx, at, vol) },
+      scuttle: { label: '沙沙爬', play: (ctx, at, vol) => scuttle(ctx, at, vol) },
+      chirp: { label: '吱吱', play: (ctx, at, vol) => chirp(ctx, at, vol) },
     }
 
-    /** 用 WebAudio 合成一声提示音（零资源、零网络）。 */
-    function playBeep(kind) {
+    /** 短噪声缓冲（钳子、沙子这类声音的底子）。 */
+    function noiseBuffer(ctx, seconds) {
+      var length = Math.max(1, Math.floor(ctx.sampleRate * seconds))
+      var buffer = ctx.createBuffer(1, length, ctx.sampleRate)
+      var data = buffer.getChannelData(0)
+      for (var i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1
+      return buffer
+    }
+
+    /** 一下钳子："咔"。 */
+    function oneClack(ctx, at, vol, centerHz) {
+      var src = ctx.createBufferSource()
+      src.buffer = noiseBuffer(ctx, 0.06)
+      var band = ctx.createBiquadFilter()
+      band.type = 'bandpass'
+      band.frequency.value = centerHz
+      band.Q.value = 2.4
+      var gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, at)
+      gain.gain.exponentialRampToValueAtTime(vol, at + 0.004)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.055)
+      src.connect(band).connect(gain).connect(ctx.destination)
+      src.start(at)
+      src.stop(at + 0.07)
+    }
+
+    /** 连夹几下：咔嚓／咔嚓咔嚓。 */
+    function clack(ctx, at, vol, times) {
+      for (var i = 0; i < times; i += 1) {
+        oneClack(ctx, at + i * 0.075, vol * (i === 0 ? 1 : 0.8), 2100 + Math.random() * 900)
+      }
+    }
+
+    /** 叩壳：低频一记闷响 + 一点壳的杂音。 */
+    function knock(ctx, at, vol) {
+      var osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(150, at)
+      osc.frequency.exponentialRampToValueAtTime(70, at + 0.14)
+      var gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, at)
+      gain.gain.exponentialRampToValueAtTime(vol, at + 0.006)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.16)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(at)
+      osc.stop(at + 0.18)
+      oneClack(ctx, at, vol * 0.5, 900)
+    }
+
+    /** 咕噜：气泡从水里冒出来。 */
+    function bubble(ctx, at, vol) {
+      var osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(260, at)
+      osc.frequency.exponentialRampToValueAtTime(760, at + 0.16)
+      var gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, at)
+      gain.gain.exponentialRampToValueAtTime(vol * 0.9, at + 0.03)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.2)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(at)
+      osc.stop(at + 0.22)
+    }
+
+    /** 沙沙爬：一段带节奏的沙粒噪声。 */
+    function scuttle(ctx, at, vol) {
+      var src = ctx.createBufferSource()
+      src.buffer = noiseBuffer(ctx, 0.34)
+      var band = ctx.createBiquadFilter()
+      band.type = 'bandpass'
+      band.frequency.value = 1300
+      band.Q.value = 1.1
+      var gain = ctx.createGain()
+      gain.gain.setValueAtTime(vol * 0.7, at)
+      for (var i = 0; i < 6; i += 1) {
+        var t = at + i * 0.055
+        gain.gain.setValueAtTime(vol * 0.85, t)
+        gain.gain.exponentialRampToValueAtTime(vol * 0.25, t + 0.04)
+      }
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34)
+      src.connect(band).connect(gain).connect(ctx.destination)
+      src.start(at)
+      src.stop(at + 0.36)
+    }
+
+    /** 吱吱：螃蟹被拎起来那种短促摩擦声。 */
+    function chirp(ctx, at, vol) {
+      var osc = ctx.createOscillator()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(1500, at)
+      osc.frequency.exponentialRampToValueAtTime(950, at + 0.07)
+      var band = ctx.createBiquadFilter()
+      band.type = 'bandpass'
+      band.frequency.value = 1600
+      band.Q.value = 3
+      var gain = ctx.createGain()
+      gain.gain.setValueAtTime(0.0001, at)
+      gain.gain.exponentialRampToValueAtTime(vol * 0.6, at + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09)
+      osc.connect(band).connect(gain).connect(ctx.destination)
+      osc.start(at)
+      osc.stop(at + 0.1)
+    }
+
+    /** 音量：设置页写，播放时读。 */
+    var sfxVolume = 0.6
+
+    /** 播放一个螃蟹声。 */
+    function playSfx(name) {
       var ctx = ensureAudioCtx()
       if (!ctx) return
       if (ctx.state === 'suspended') ctx.resume().catch(function () {})
-      var tones = BEEP_TONES[kind] || BEEP_TONES.done
-      var at = ctx.currentTime
-      tones.forEach(function (pair) {
-        var osc = ctx.createOscillator()
-        var gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.value = pair[0]
-        gain.gain.setValueAtTime(0.0001, at)
-        gain.gain.exponentialRampToValueAtTime(0.16, at + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.0001, at + pair[1])
-        osc.connect(gain).connect(ctx.destination)
-        osc.start(at)
-        osc.stop(at + pair[1] + 0.02)
-        at += pair[1]
-      })
+      var entry = SFX[name] || SFX.clack
+      var vol = Math.max(0.05, Math.min(1, Number(sfxVolume) || 0.6)) * 0.45
+      try { entry.play(ctx, ctx.currentTime + 0.01, vol) } catch (err) { /* ignore */ }
     }
 
-    var player = {
-      el: null,
-      queue: [],
-      volume: 0.6,
-      playing: false,
-      enqueue: function (url) {
-        if (!url) return
-        // 归一化：/kaka/audio/<sha>.wav → /kaka/audio?id=<sha>（精确路由才拿得到）
-        url = String(url).replace(/\/kaka\/audio\/([a-f0-9]{40})\.wav$/u, '/kaka/audio?id=$1')
-        this.queue.push(url)
-        this.pump()
-      },
-      pump: function () {
-        if (this.playing || !this.queue.length) return
-        var self = this
-        var url = this.queue.shift()
-        if (!this.el) {
-          this.el = new Audio()
-          this.el.addEventListener('ended', function () { self.playing = false; self.pump() })
-          this.el.addEventListener('error', function () { self.playing = false; self.pump() })
-        }
-        this.playing = true
-        this.el.src = url
-        this.el.volume = this.volume
-        var promise = this.el.play()
-        if (promise && promise.catch) {
-          promise.catch(function (err) {
-            self.playing = false
-            try { console.warn('[kaka] 播放失败：', err && err.message, url) } catch (e2) { /* ignore */ }
-          })
-        }
-      },
-      stop: function () {
-        this.queue.length = 0
-        this.playing = false
-        if (this.el) {
-          try { this.el.pause() } catch (err) { /* ignore */ }
-          this.el.currentTime = 0
-        }
-      },
+    /** 宿主 beep 事件 → 螃蟹声。 */
+    var BEEP_TO_SFX = {
+      done: 'clack2',
+      question: 'chirp',
+      error: 'knock',
+      attention: 'clack',
+      pet: 'bubble',
     }
 
     // ============================================================ 宠物视觉
@@ -628,7 +698,7 @@ window.__ModuleLoader__.load({
           .then(function (payload) {
             if (payload && payload.ok) {
               setSettings(payload.settings)
-              player.volume = payload.settings.voice.volume
+              sfxVolume = payload.settings.voice.volume
               if (payload.life && payload.life.mood) setMood(payload.life.mood.name)
             }
           })
@@ -679,7 +749,7 @@ window.__ModuleLoader__.load({
           .then(function (payload) {
             if (payload && payload.ok) {
               setSettings(payload.settings)
-              player.volume = payload.settings.voice.volume
+              sfxVolume = payload.settings.voice.volume
               if (payload.life && payload.life.mood) setMood(payload.life.mood.name)
               cursorRef.current = payload.life && payload.life.cursor ? payload.life.cursor : 0
             }
@@ -699,14 +769,14 @@ window.__ModuleLoader__.load({
             if (!item) continue
             // 带会话的条目只归那个会话所有：多标签/多会话时不串音
             if (item.session && item.session !== sessionRef.current) continue
-            if (item.kind === 'say') player.enqueue(item.audioUrl)
-            else if (item.kind === 'beep') playBeep(item.sound)
+            if (item.kind === 'say') { /* 说话功能已移除，忽略历史语音条目 */ }
+            else if (item.kind === 'beep') playSfx(BEEP_TO_SFX[item.sound] || 'clack')
             else if (item.kind === 'mood') {
               setMood(item.mood || 'idle')
               if (item.mood === 'proud') showBubble(t('pet.proud'))
             } else if (item.kind === 'bubble') showBubble(item.text)
             else if (item.kind === 'settings') refreshProfile()
-            else if (item.kind === 'stop') player.stop()
+            else if (item.kind === 'stop') { /* 语音已移除 */ }
           }
         }
 
@@ -754,7 +824,7 @@ window.__ModuleLoader__.load({
         // 当下就给反馈，不等网络
         setMood('petted')
         showBubble(t('pet.petted'))
-        playBeep('pet')
+        playSfx('bubble')
         postJson(API + '/poke', { sessionId: sessionId })
           .then(function (payload) { setBusy(!!(payload && payload.reason === 'busy')) })
           .catch(function () {})
@@ -957,6 +1027,7 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-desc{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-secondary);margin-top:2px;max-width:420px}',
       '.dsc-kaka-control{display:flex;align-items:center;gap:8px;flex-shrink:0}',
       // 开关：关闭态用灰轨道（原来的 state-idle-primary 在这套主题里接近白色，白钮看不见）
+      '.dsc-kaka-sfx{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}',
       '.dsc-kaka-switch{position:relative;flex-shrink:0;width:38px;height:22px;border-radius:999px;border:none;cursor:pointer;padding:0;background:color-mix(in srgb, var(--dsw-alias-label-secondary) 34%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-secondary) 28%, transparent);transition:background .16s, box-shadow .16s}',
       '.dsc-kaka-switch:hover{background:color-mix(in srgb, var(--dsw-alias-label-secondary) 46%, transparent)}',
       '.dsc-kaka-switch[data-on="true"]{background:var(--dsw-alias-brand-primary);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-brand-primary) 80%, #000 20%)}',
@@ -1138,58 +1209,26 @@ window.__ModuleLoader__.load({
             h(Switch, { checked: !!settings.pet.ramble, onChange: function (v) { patch('pet', 'ramble', v) } }))),
 
         h(Group, { title: t('group.voice') },
-          meta && meta.voiceAvailable === false
-            ? h('div', {
-              className: 'dsc-kaka-row',
-              style: { color: 'var(--dsw-alias-state-warn-primary)', fontSize: 12 },
-            }, t('voice.missingKey'))
-            : null,
-          h(Row, { label: t('row.voiceId'), desc: t('row.voiceId.desc') },
-            h(Segmented, {
-              value: settings.voice.voiceId,
-              options: [
-                { value: 'stella', label: t('voice.stella') },
-                { value: 'tide', label: t('voice.tide') },
-              ],
-              onChange: function (v) { patch('voice', 'voiceId', v) },
-            })),
-          h(Row, { label: t('row.volume') },
+          h(Row, { label: t('row.volume'), desc: t('row.volume.desc') },
             h('input', {
               type: 'range', min: 0, max: 1, step: 0.05,
               value: settings.voice.volume,
               style: { width: 120 },
               onChange: function (event) {
-                player.volume = Number(event.target.value)
+                sfxVolume = Number(event.target.value)
                 patch('voice', 'volume', Number(event.target.value))
               },
             })),
-          h(Row, { label: t('row.autoRead'), desc: t('row.autoRead.desc') },
-            h(Switch, { checked: !!settings.voice.autoRead, onChange: function (v) { patch('voice', 'autoRead', v) } })),
-          h(Row, { label: t('row.cache'), desc: t('row.cache.desc') },
-            h(Switch, { checked: !!settings.voice.cache, onChange: function (v) { patch('voice', 'cache', v) } })),
-          h(Row, { label: t('row.maxChars'), desc: t('row.maxChars.desc') },
-            h('input', {
-              type: 'number', min: 40, max: 10000, step: 20,
-              className: 'dsc-kaka-num',
-              value: settings.voice.maxBilledChars,
-              onChange: function (event) { patch('voice', 'maxBilledChars', Number(event.target.value) || 200) },
-            })),
-          h(Row, { label: t('row.billing') },
-            h('div', { className: 'dsc-kaka-hint' },
-              meta && meta.billing
-                ? (meta.billing.chars + ' 字符 · ' + meta.billing.calls + ' 次 · ¥' + meta.billing.yuan)
-                : '—')),
-          h(Row, { label: t('action.test') },
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              onClick: function () {
-                postJson(API + '/say', { text: '钳子准备好了！咔嚓！' }).catch(function () {})
-              },
-            }, t('action.test')),
-            h('button', {
-              type: 'button', className: 'dsc-kaka-btn',
-              onClick: function () { postJson(API + '/audio/clear', {}).catch(function () {}) },
-            }, t('action.clearAudio')))),
+          h(Row, { label: t('row.sfxTest'), desc: t('row.sfxTest.desc') },
+            h('div', { className: 'dsc-kaka-sfx' },
+              Object.keys(SFX).map(function (name) {
+                return h('button', {
+                  key: name,
+                  type: 'button',
+                  className: 'dsc-kaka-btn',
+                  onClick: function () { playSfx(name) },
+                }, SFX[name].label)
+              })))),
 
         h(Group, { title: t('group.notify') },
           h(Row, { label: t('row.notifyLevel'), desc: t('row.notifyLevel.desc') },

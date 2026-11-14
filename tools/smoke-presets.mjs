@@ -44,9 +44,9 @@ for (const def of registered) {
   const required = def.parameters?.required || []
   console.log(`- ${def.name}: props=${Object.keys(def.parameters?.properties || {}).join('|')} required=${required.join('|')}`)
 }
-const sample = registered.find(d => d.name === 'kaka_say')
+const sample = registered.find(d => d.name === 'kaka_beep')
 if (sample) {
-  console.log('kaka_say output schema:', JSON.stringify(sample.output?.schema)?.slice(0, 200))
+  console.log('kaka_beep output schema:', JSON.stringify(sample.output?.schema)?.slice(0, 200))
   const rendered = sample.output?.render({}, { cached: true, billedChars: 0, spoken: '咔嚓', audioUrl: '/kaka/audio/x.wav' })
   console.log('render sample:', JSON.stringify(rendered))
   const value = await sample.execute({ text: '  ' }, { signal: undefined, agent: undefined })
