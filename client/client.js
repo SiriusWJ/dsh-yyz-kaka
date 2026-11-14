@@ -731,9 +731,19 @@ window.__ModuleLoader__.load({
         var node = anchorRef.current
         if (!node) return undefined
         var update = function () {
-          var box = node.getBoundingClientRect()
+          // 锚点是 0×0 的 span，量不到输入框的右边界；往上找一个有宽度的祖先（输入框卡片）。
+          var host = node
+          var hostBox = node.getBoundingClientRect()
+          for (var level = 0; level < 4; level += 1) {
+            var parent = host.parentElement
+            if (!parent) break
+            var candidate = parent.getBoundingClientRect()
+            if (candidate.width > hostBox.width) { host = parent; hostBox = candidate }
+            if (candidate.width > 240) break
+          }
+          var box = hostBox
           if (!box || (box.width === 0 && box.height === 0 && box.top === 0)) return
-          setRect({ left: box.left, top: box.top, bottom: box.bottom, width: box.width, height: box.height })
+          setRect({ left: box.left, top: box.top, bottom: box.bottom, right: box.right, width: box.width, height: box.height })
         }
         update()
         var observer = null
@@ -887,9 +897,12 @@ window.__ModuleLoader__.load({
       var size = 80 // 设置里不再提供尺寸选项，固定 80px
       var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end' }
       if (rect) {
-        var left = Math.round(rect.right + 18) // 站在输入框右侧
+        // 站在输入框右侧；右边放不下就贴视口右边
+        var viewportWidth = (typeof window !== 'undefined' && window.innerWidth) || 1280
+        var rightEdge = typeof rect.right === 'number' ? rect.right : (rect.left + rect.width)
+        var left = Math.round(rightEdge + 18)
+        if (left + size > viewportWidth - 12) left = Math.max(12, viewportWidth - size - 12)
         var top = Math.round(rect.top + rect.height / 2 - size * 0.86)
-        if (left < 12) left = Math.round(rect.left + 6)
         if (top < 8) top = 8
         style.left = left + 'px'
         style.top = top + 'px'
