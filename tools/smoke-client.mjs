@@ -351,7 +351,7 @@ const dockSource = render(React.createElement(petSlot.component, {
   initialSettings: petSettings,
   useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['dsc-kaka-dock', 'dsc-kaka-ibtn', 'dsc-kaka-tip', 'dock.about', 'dock.plan', 'dock.memory']) {
+for (const key of ['dsc-kaka-dock', 'dsc-kaka-ibtn', 'dsc-kaka-tip', 'dock.open']) {
   if (!dockSource.includes(key)) throw new Error('图标坞缺少：' + key)
 }
 
@@ -384,11 +384,12 @@ const petElement = React.createElement(petSlot.component, {
 })
 const firstPass = renderRoot(petElement)
 if (firstPass.markup.includes('data-kaka-panel')) throw new Error('默认不应该有面板')
-const aboutButton = firstPass.clickables.find(item => item.label === 'dock.about')
-if (!aboutButton) throw new Error('找不到「关于」按钮（aria-label=dock.about）')
+const aboutButton = firstPass.clickables.find(item => item.label === 'dock.open')
+if (!aboutButton) throw new Error('找不到入口按钮（aria-label=dock.open）')
 aboutButton.onClick()
 const secondPass = rerender(petElement)
-if (!secondPass.markup.includes('data-kaka-panel')) throw new Error('点了「关于」之后面板没出现')
+if (!secondPass.markup.includes('data-kaka-panel')) throw new Error('点了入口按钮之后面板没出现')
+if (!secondPass.markup.includes('dsc-kaka-panel-foot')) throw new Error('面板缺少底部状态条')
 
 // 5) 小本子面板：打开某一页时渲染容器、页签与标题
 const panelMarkup = render(React.createElement(petSlot.component, {
