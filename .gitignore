@@ -23,3 +23,5 @@ Thumbs.db
 !.env.example
 
 tools/_preview-render.png
+
+*.tgz
