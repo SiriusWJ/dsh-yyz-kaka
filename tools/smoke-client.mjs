@@ -55,6 +55,8 @@ function createMiniReact() {
     useCallback(fn) { cursor += 1; return fn },
   }
 
+  const clickables = []
+
   function renderNode(node) {
     if (node === null || node === undefined || node === false || node === true) return ''
     if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -85,6 +87,8 @@ function createMiniReact() {
       }
     }
 
+    if (typeof props.onClick === 'function') clickables.push({ type: String(type), onClick: props.onClick })
+
     // 宿主标签：输出 `#tag` + 子节点，属性用 [] 标出来，方便断言
     const attrs = Object.keys(props)
       .filter(key => key !== 'children' && props[key] !== undefined)
@@ -97,12 +101,18 @@ function createMiniReact() {
     return `#${String(type)}[${attrs.join('|')}]${children.map(renderNode).join('')}`
   }
 
-  return { React, render: renderNode }
+  function renderRoot(element) {
+    clickables.length = 0
+    const markup = renderNode(element)
+    return { markup, clickables: clickables.slice() }
+  }
+
+  return { React, render: renderNode, renderRoot }
 }
 
 // ---------------------------------------------------------------- 浏览器桩
 
-const { React, render } = createMiniReact()
+const { React, render, renderRoot } = createMiniReact()
 
 const registrations = []
 const injected = []
@@ -159,7 +169,11 @@ const doc = {
   removeEventListener: () => {},
 }
 
-const fetchStub = () => Promise.resolve({ json: () => Promise.resolve({ ok: true }), text: () => Promise.resolve('') })
+const fetchCalls = []
+const fetchStub = (url, options) => {
+  fetchCalls.push({ url: String(url), options: options || {} })
+  return Promise.resolve({ json: () => Promise.resolve({ ok: true }), text: () => Promise.resolve('') })
+}
 
 const source = readFileSync(new URL('../client/client.js', import.meta.url), 'utf8')
 const runFactory = new Function(
@@ -224,15 +238,28 @@ if (idleMarkup.includes('#img')) throw new Error('非咔咔会话不应该渲染
 if (!idleMarkup.includes('#span')) throw new Error(`非咔咔会话应该只渲染锚点 span：${idleMarkup.slice(0, 120)}`)
 
 // 2) 咔咔会话：完整走一遍 render body（样式、心情、气泡）
-const kakaMarkup = render(React.createElement(petSlot.component, {
+const kakaRender = renderRoot(React.createElement(petSlot.component, {
   sessionId: 'session-x',
   t,
   initialSettings: petSettings,
   useSessions: useSessionsFor('kaka'),
 }))
+const kakaMarkup = kakaRender.markup
 if (!kakaMarkup.includes('#img')) throw new Error('咔咔会话应该渲染宠物图片')
 if (!kakaMarkup.includes('data-kaka-pet')) throw new Error('宠物根节点缺少 data-kaka-pet 标记')
 if (!kakaMarkup.includes('#style')) throw new Error('宠物应该带上自己的动画样式')
+
+// 2b) 点击宠物：应该 POST /kaka/poke（这就是"摸她"的副作用）
+const clickable = kakaRender.clickables.find(item => item.type === 'div')
+if (!clickable) throw new Error('宠物没有可点击的根元素')
+fetchCalls.length = 0
+clickable.onClick()
+if (!fetchCalls.some(call => call.url.includes('/kaka/poke'))) {
+  throw new Error('点击宠物没有触发 POST /kaka/poke，实际调用：' + JSON.stringify(fetchCalls.map(c => c.url)))
+}
+const pokeCall = fetchCalls.find(call => call.url.includes('/kaka/poke'))
+if (String(pokeCall.options.method) !== 'POST') throw new Error('戳一戳应该用 POST')
+if (!String(pokeCall.options.body || '').includes('session-x')) throw new Error('戳一戳应该带上会话 id')
 
 // 3) 关闭宠物：不渲染
 const disabledMarkup = render(React.createElement(petSlot.component, {
