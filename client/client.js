@@ -91,6 +91,7 @@ window.__ModuleLoader__.load({
         'about.diaryNote': '只有她自己的话',
         'about.dream': '梦',
         'about.dreamUnit': '篇',
+        'about.lastDream': '上次整理',
         'about.dreamNote': '夜里整理出来的',
         'about.voice': '嗓子',
         'about.voiceNote': '{c} 计费字符 · {n} 次',
@@ -224,6 +225,7 @@ window.__ModuleLoader__.load({
         'about.diaryNote': 'Only her own words',
         'about.dream': 'Dreams',
         'about.dreamUnit': 'night(s)',
+        'about.lastDream': 'Last tidy',
         'about.dreamNote': 'Made at night',
         'about.voice': 'Voice',
         'about.voiceNote': '{c} billed chars · {n} calls',
@@ -1430,7 +1432,7 @@ window.__ModuleLoader__.load({
         { k: t('about.turns'), v: String(stats.turns || 0) },
         { k: t('about.memory'), v: (stats.memoryChars || 0) + ' ' + t('view.chars') },
         { k: t('about.diary'), v: (stats.diaryDays || 0) + ' ' + t('about.days') },
-        { k: t('about.dream'), v: (stats.dreamCount || 0) + ' ' + t('about.dreamUnit') },
+        { k: t('about.lastDream'), v: data.lastDreamDate ? formatDayTitle(data.lastDreamDate) : '—' },
         { k: t('about.voice'), v: '¥' + (stats.yuan || 0) },
         { k: t('about.mood'), v: moodLabel + ' · ' + phaseLabel },
       ]
@@ -1514,7 +1516,7 @@ window.__ModuleLoader__.load({
         }
 
         // 日记 / 梦
-        var list = (tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []
+        var list = (tab === 'diary' ? (meta && meta.days) : []) || []
         var selected = day && list.indexOf(day) >= 0 ? day : (list[0] || '')
         if (!selected) {
           setText('')
@@ -1541,7 +1543,6 @@ window.__ModuleLoader__.load({
 
       var tabs = [
         { value: 'diary', label: t('view.diary') },
-        { value: 'dream', label: t('view.dream') },
         { value: 'agent', label: t('view.agent') },
         { value: 'user', label: t('view.user') },
       ]
@@ -1559,7 +1560,7 @@ window.__ModuleLoader__.load({
               }, item.label)
             }))
         } else {
-          var days = ((tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
+          var days = (tab === 'diary' ? ((meta && meta.days) || []) : []).slice(0, 8)
           chips = h(React.Fragment, null,
             h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 8 } },
               tabs.map(function (item) {
@@ -1620,7 +1621,7 @@ window.__ModuleLoader__.load({
           return h('p', { key }, block.text)
         }))
       } else {
-        var selectedDay = day || ((tab === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || ''
+        var selectedDay = day || ((tab === 'diary' ? ((meta && meta.days) || []) : [])[0] || '')
         body = h(React.Fragment, null,
           selectedDay
             ? h('div', { className: 'dsc-kaka-panel-meta' },
@@ -1631,18 +1632,6 @@ window.__ModuleLoader__.load({
             return h('p', { key: 'p' + index, className: index === 0 ? 'dsc-kaka-lead' : undefined }, paragraph)
           })))
       }
-
-      var dreamAction = tab === 'dream' && section === 'memory'
-        ? h('button', {
-          type: 'button',
-          className: 'dsc-kaka-panel-action',
-          onClick: function () {
-            postJson(API + '/life/force', { kind: 'dream' })
-              .then(function () { setNote(t('dream.queued')) })
-              .catch(function (err) { setNote(String(err && err.message || err)) })
-          },
-        }, t('dream.action'))
-        : null
 
       return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true', style: props.style },
         h('div', { className: 'dsc-kaka-panel-head' },
@@ -1673,7 +1662,6 @@ window.__ModuleLoader__.load({
           chips,
           error ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error) : null,
           body,
-          dreamAction,
           note ? h('div', { className: 'dsc-kaka-panel-sub', style: { marginTop: 10 } }, note) : null),
         h('div', { className: 'dsc-kaka-panel-foot' },
           h('span', null, t('about.footerData')),

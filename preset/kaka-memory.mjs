@@ -24,11 +24,8 @@ import {
   log,
   readDiary,
   readJournal,
-  readDream,
   readMemory,
-  recentDreams,
   renderMemoryBlock,
-  writeDream,
   writeMemory,
 } from '../lib/runtime.js'
 
@@ -38,15 +35,6 @@ export const inject = ['tools', 'systemPrompt']
 /** 注入章节里出现的变量名。 */
 const MEMORY_VAR = 'kaka_memory'
 
-/** 梦摘要的最大字符数：够她"有东西可讲"，又不至于吃掉记忆预算。 */
-const DREAM_EXCERPT_LIMIT = 600
-
-function excerpt(text, limit) {
-  const clean = String(text ?? '').trim()
-  if (clean.length <= limit) return clean
-  return `${clean.slice(0, limit)}……`
-}
-
 /**
  * 渲染这一次装配要注入的记忆正文。
  * @returns {string} 永远返回字符串：变量返回 undefined 会让整个装配失败。
@@ -55,15 +43,6 @@ function renderMemorySection() {
   const parts = []
   const memory = renderMemoryBlock()
   if (memory) parts.push(memory)
-
-  try {
-    const [latest] = recentDreams(1)
-    if (latest) {
-      parts.push(`## 最近的梦（${latest.date}）\n${excerpt(latest.text, DREAM_EXCERPT_LIMIT)}`)
-    }
-  } catch (err) {
-    log('读取梦境失败', err?.message || err)
-  }
 
   return parts.join('\n\n')
 }
@@ -149,7 +128,7 @@ export async function apply(ctx) {
   // ── 3. kaka_journal：读日记（可选带素材） ────────────────────────
   ctx.tools.register(defineTool({
     name: 'kaka_journal',
-    description: '读咔咔的日记、梦，以及（可选）当天的素材。素材是宿主记下的"今天发生了什么"，写日记时参考它，但不要把素材原文写进日记。',
+    description: '读咔咔的日记，以及（可选）当天的素材。素材是宿主记下的"今天发生了什么"，写日记时参考它，但不要把素材原文写进日记。',
     parameters: {
       date: {
         type: 'string',
@@ -170,14 +149,13 @@ export async function apply(ctx) {
           text: { type: 'string' },
           facts: { type: 'string' },
           days: { type: 'array', items: { type: 'string' } },
-          dreams: { type: 'array', items: { type: 'string' } },
         },
       },
       render: (_args, value) => {
         if (value.kind === 'list') {
           return [{
             type: 'text',
-            text: `日记：${(value.days || []).join(', ') || '（空）'}\n梦：${(value.dreams || []).join(', ') || '（空）'}`,
+            text: `日记：${(value.days || []).join(', ') || '（空）'}`,
           }]
         }
         const parts = [`${value.date} 的日记：\n${value.text || '（这一天还没有日记）'}`]
@@ -192,7 +170,6 @@ export async function apply(ctx) {
         return Promise.resolve({
           kind: 'list',
           days: listDiaries(14),
-          dreams: recentDreams(7).map(item => item.date),
         })
       }
       const day = String(args.date || '').trim()
@@ -237,41 +214,4 @@ export async function apply(ctx) {
     presentCall: () => ({ card: 'generic', title: '写日记', kind: 'other' }),
   }))
 
-  // ── 5. kaka_dream：写梦 ──────────────────────────────────────────
-  ctx.tools.register(defineTool({
-    name: 'kaka_dream',
-    description: '写下今晚的梦（第一人称的叙事，不是工作汇报），会存进 dreams 目录并在下次会话里出现在提示中。',
-    parameters: {
-      text: {
-        type: 'string',
-        required: true,
-        description: '梦的正文。300～600 字，像真的在说梦话，不要用列表符号。',
-      },
-    },
-    output: {
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          date: { type: 'string', required: true },
-          chars: { type: 'integer', required: true },
-          billed: { type: 'integer', required: true },
-        },
-      },
-      render: (_args, value) => [{ type: 'text', text: `梦记下了（${value.date}，${value.chars} 字符）。` }],
-    },
-    execute(args) {
-      const text = String(args.text ?? '').trim()
-      if (!text) throw new Error('梦不能是空的')
-      ensureDirs()
-      writeDream(`# ${dateKey()} 的梦\n\n${text}\n`)
-      return Promise.resolve({ date: dateKey(), chars: text.length, billed: billedChars(text) })
-    },
-    presentCall: () => ({ card: 'generic', title: '做梦', kind: 'other' }),
-  }))
-
-  // 读一次旧梦，保证目录存在（首次运行时不会报错）
-  try {
-    readDream()
-  } catch { /* 忽略 */ }
 }
