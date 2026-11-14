@@ -209,17 +209,11 @@ if (!Array.isArray(exported.inject) || !exported.inject.includes('slots')) throw
 
 exported.apply(ctx)
 
-// 视图是「按当前会话预设」动态登记的，测试里显式触发一次
-if (typeof exported.__test.registerView === 'function') exported.__test.registerView()
-
 const petSlot = registrations.find(item => item.options.name === 'conversation.input.overlay')
 const settingsSlot = registrations.find(item => item.options.name === 'settings.plugins.tab')
-const viewSlot = registrations.find(item => item.options.name === 'conversation.view')
-const gateSlot = registrations.find(item => item.options.name === 'shell.overlay')
-if (!petSlot || !settingsSlot || !viewSlot || !gateSlot) throw new Error('缺少宠物 / 设置 tab / 对话视图 / 视图守门槽位')
+if (!petSlot || !settingsSlot) throw new Error('缺少宠物或设置 tab 槽位')
 if (petSlot.options.id !== 'dsh-yyz-kaka-pet') throw new Error(`宠物槽位 id 变了：${petSlot.options.id}`)
 if (settingsSlot.options.id !== 'kaka') throw new Error(`设置 tab id 变了：${settingsSlot.options.id}`)
-if (viewSlot.options.id !== 'kaka') throw new Error(`对话视图 id 变了：${viewSlot.options.id}`)
 
 const t = key => key
 const petSettings = {
@@ -316,73 +310,48 @@ for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'gr
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
 }
 
-// 4) 咔咔对话页签：三个分片 + 容器
-const viewMarkup = render(React.createElement(viewSlot.component, {
-  t,
+// 4) 图标坞：五个按钮 + 悬停提示
+const dockSource = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['dsc-kaka-view', 'about.tab', 'view.diary', 'view.dream', 'view.memory']) {
-  if (!viewMarkup.includes(key)) throw new Error(`咔咔页签缺少内容：${key}`)
+for (const key of ['dsc-kaka-dock', 'dsc-kaka-ibtn', 'dsc-kaka-tip', 'dock.about', 'dock.diary', 'dock.memory', 'dock.dream', 'dock.plan']) {
+  if (!dockSource.includes(key)) throw new Error('图标坞缺少：' + key)
 }
 
-// 4a) 关于页：头像、身份、生日、陪伴、统计卡片
-const aboutMarkup = render(React.createElement(viewSlot.component, {
+// 4e) 关于页内容：头像、身份、生日、陪伴、八张卡
+const aboutMarkup = render(React.createElement(exported.__test.KakaAbout, {
   t,
-  sessionId: 'session-x',
-  initialView: {
-    part: 'about',
-    meta: { days: ['2026-11-14'], dreams: [], memory: { agent: 697, user: 58 } },
-    about: {
-      ok: true,
-      name: '咔咔',
-      species: '螃蟹',
-      role: '主人的积极工作助手',
-      quote: '钳子准备好了！',
-      birthday: Date.parse('2026-11-14T08:00:00+08:00'),
-      companionMs: 6300000,
-      stats: { turns: 25, diaryDays: 1, dreamCount: 1, memoryChars: 755, memoryAgent: 697, memoryUser: 58, billedChars: 66, voiceCalls: 4, yuan: 0.0099 },
-      mood: 'idle',
-      phase: 'awake',
-      voice: 'stella',
-    },
+  data: {
+    name: '咔咔',
+    species: '螃蟹',
+    role: '主人的积极工作助手',
+    quote: '钳子准备好了！',
+    birthday: Date.parse('2026-11-14T08:00:00+08:00'),
+    companionMs: 6300000,
+    stats: { turns: 25, diaryDays: 1, dreamCount: 1, memoryChars: 755, voiceCalls: 4, yuan: 0.0099 },
+    mood: 'idle',
+    phase: 'awake',
   },
 }))
-for (const key of ['dsc-kaka-hero', 'dsc-kaka-halo', 'dsc-kaka-name', '钳子准备好了', 'about.companion', 'about.birthday', 'about.turns', 'about.memory', 'mood.idle', 'phase.awake']) {
+for (const key of ['dsc-kaka-hero', 'dsc-kaka-halo', 'dsc-kaka-name', '钳子准备好了', 'about.companion', 'about.birthday', 'about.turns', 'about.memory', 'about.voice', 'mood.idle', 'phase.awake']) {
   if (!aboutMarkup.includes(key)) throw new Error('关于页缺少：' + key)
 }
 if (!/11 月 14 日/.test(aboutMarkup)) throw new Error('关于页缺少生日日期')
 
-// 4b) 日记排版：日期头 + 首字下沉 + 段落
-const diaryMarkup = render(React.createElement(viewSlot.component, {
-  t,
+// 5) 小本子面板：打开某一页时渲染容器、页签与标题
+const panelMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
-  initialView: {
-    part: 'diary',
-    meta: { days: ['2026-11-14'], dreams: ['2026-11-13'], memory: { agent: 697, user: 58 } },
-    day: '2026-11-14',
-    text: '第一段日记，今天陪主人干活。\n\n第二段，夜里很安静。',
-  },
-}))
-for (const key of ['dsc-kaka-paper-meta', 'dsc-kaka-paper-date', '11 月 14 日', 'dsc-kaka-lead', '第二段']) {
-  if (!diaryMarkup.includes(key)) throw new Error(`日记排版缺少：${key}`)
-}
-if (!/星期[日一二三四五六]/.test(diaryMarkup)) throw new Error('日记缺少星期显示')
-
-// 4c) 记忆排版：小标题 + 列表
-const memoryMarkup = render(React.createElement(viewSlot.component, {
   t,
-  sessionId: 'session-x',
-  initialView: {
-    part: 'memory',
-    target: 'agent',
-    meta: { days: [], dreams: [], memory: { agent: 697, user: 58 } },
-    text: '# MEMORY.md · 长期记忆\n\n## 关于我自己\n- [身份] 咔咔\n- [工具观] kaka_memory\n\n一段说明。',
-  },
+  initialSettings: petSettings,
+  initialPanel: 'about',
+  useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['#h3', '#ul', '#li', '关于我自己', '一段说明。']) {
-  if (!memoryMarkup.includes(key)) throw new Error(`记忆排版缺少：${key}`)
+for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'panel.close']) {
+  if (!panelMarkup.includes(key)) throw new Error('小本子面板缺少：' + key)
 }
-if (memoryMarkup.includes('# MEMORY.md')) throw new Error('记忆不应把 Markdown 的 # 原样显示')
 
 // 4d) 纯函数：切段、解析、日期格式
 const helpers = exported.__test

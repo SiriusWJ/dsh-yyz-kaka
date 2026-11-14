@@ -63,6 +63,23 @@ window.__ModuleLoader__.load({
         'view.hint': '这些都是咔咔自己的小本子，所有咔咔会话共享。',
         'view.chars': '字符',
         'about.tab': '关于',
+        'dock.about': '关于咔咔',
+        'dock.diary': '日记',
+        'dock.memory': '记忆',
+        'dock.dream': '梦',
+        'dock.plan': '她的日程',
+        'panel.title': '咔咔的小本子',
+        'panel.close': '关闭',
+        'plan.kind.reminder': '闹钟',
+        'plan.kind.wake': '醒来',
+        'plan.kind.diary': '写日记',
+        'plan.kind.dream': '做梦',
+        'plan.kind.other': '其他',
+        'plan.noWhat': '到点叫她',
+        'plan.empty': '她还没有给自己排任何日程',
+        'dream.action': '立刻做个梦',
+        'dream.queued': '已经让她去睡了，醒来会在日记里告诉你',
+
         'about.companion': '陪伴',
         'about.companionNote': '从第一次开机算起',
         'about.birthday': '生日',
@@ -180,6 +197,23 @@ window.__ModuleLoader__.load({
         'view.hint': "Kaka's own notebooks, shared by every Kaka session.",
         'view.chars': 'chars',
         'about.tab': 'About',
+        'dock.about': 'About her',
+        'dock.diary': 'Journal',
+        'dock.memory': 'Memory',
+        'dock.dream': 'Dreams',
+        'dock.plan': 'Her schedule',
+        'panel.title': "Kaka's notebook",
+        'panel.close': 'Close',
+        'plan.kind.reminder': 'Alarm',
+        'plan.kind.wake': 'Wake',
+        'plan.kind.diary': 'Journal',
+        'plan.kind.dream': 'Dream',
+        'plan.kind.other': 'Other',
+        'plan.noWhat': 'Wake her up',
+        'plan.empty': 'She has no schedule yet',
+        'dream.action': 'Dream now',
+        'dream.queued': 'She went to sleep; the dream shows up tomorrow',
+
         'about.companion': 'Together',
         'about.companionNote': 'Since her first boot',
         'about.birthday': 'Birthday',
@@ -498,6 +532,8 @@ window.__ModuleLoader__.load({
       var [hover, setHover] = useState(false)
       // 只有「对话」页签才显示宠物；切到咔咔/轨迹/上下文等页签时让位。
       var [viewId, setViewId] = useState(readViewId(sessionId))
+      // 图标坞打开的那一页（null = 收起）；initialPanel 是渲染测试的注入口
+      var [panel, setPanel] = useState(props.initialPanel || null)
       var cursorRef = useRef(0)
       var bubbleTimer = useRef(null)
       var pokeTimer = useRef(null)
@@ -643,6 +679,16 @@ window.__ModuleLoader__.load({
           .catch(function () {})
       }, [sessionId, showBubble, t])
 
+      // Esc 收起小本子
+      useEffect(function () {
+        if (!panel) return undefined
+        function onKey(event) {
+          if (event.key === 'Escape') setPanel(null)
+        }
+        document.addEventListener('keydown', onKey)
+        return function () { document.removeEventListener('keydown', onKey) }
+      }, [panel])
+
       // 页签同步：对话 shell 把选中的 view 存在 localStorage，轮询一下即可跟随
       useEffect(function () {
         if (!isKaka) return undefined
@@ -665,7 +711,7 @@ window.__ModuleLoader__.load({
       }
 
       var size = settings.pet.size || 80
-      var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end', gap: 0 }
+      var style = { position: 'fixed', zIndex: 40, display: 'flex', alignItems: 'flex-end', gap: 10 }
       if (rect) {
         var left = Math.round(rect.left - size - 14)
         var top = Math.round(rect.top + rect.height / 2 - size * 0.62)
@@ -680,6 +726,30 @@ window.__ModuleLoader__.load({
 
       var bubbleKey = PET_BUBBLES[mood] ? t(PET_BUBBLES[mood]) : ''
       var bubbleText = bubble || bubbleKey
+
+      var dockNode = h('div', { className: 'dsc-kaka-dock' },
+        DOCK_ITEMS.map(function (item) {
+          return h('button', {
+            key: item.part,
+            type: 'button',
+            className: 'dsc-kaka-ibtn' + (panel === item.part ? ' is-open' : ''),
+            'aria-label': t(item.label),
+            onClick: function () {
+              setPanel(function (current) { return current === item.part ? null : item.part })
+            },
+          }, h(DockIcon, { name: item.icon }), h('span', { className: 'dsc-kaka-tip' }, t(item.label)))
+        }))
+
+      var panelNode = panel
+        ? h('div', {
+          style: {
+            position: 'absolute',
+            left: 'calc(100% + 12px)',
+            bottom: 0,
+            zIndex: 41,
+          },
+        }, h(KakaPanel, { t: t, part: panel, onClose: function () { setPanel(null) } }))
+        : null
 
       var petNode = h('div', {
         style: style,
@@ -736,11 +806,14 @@ window.__ModuleLoader__.load({
           },
         }, bubbleText)
         : null,
-      ))
+      ),
+      dockNode,
+      panelNode,
+      )
 
       return h(React.Fragment, null,
         h('span', { ref: anchorRef, style: { display: 'inline-block', width: 0, height: 0 } }),
-        h('style', null, PET_CSS),
+        h('style', null, PET_CSS + PANEL_CSS),
         createPortal(petNode, document.body),
       )
     }
@@ -1102,7 +1175,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    // ============================================================ 咔咔页签（对话视图）
+    // ============================================================ 咔咔的小本子（浮层面板）
 
     /** 当前会话选中的对话页签；null 或缺失都表示默认的「对话」。 */
     function readViewId(sessionId) {
@@ -1120,59 +1193,84 @@ window.__ModuleLoader__.load({
     /** 咔咔页签打开时置位：宠物要立刻让位，不必等轮询。 */
     var kakaTabOpen = false
 
-    /** apply 里装配的视图登记器（同时供渲染测试调用）。 */
-    var kakaViewRegistrar = null
-
-    var VIEW_CSS = [
-      '.dsc-kaka-view{display:flex;flex-direction:column;gap:14px;height:100%;width:100%;box-sizing:border-box;padding:20px 24px 8px;color:var(--dsw-alias-label-primary)}',
-      '.dsc-kaka-view-head{display:flex;align-items:center;gap:12px}',
-      '.dsc-kaka-view-avatar{width:38px;height:38px;flex-shrink:0;filter:drop-shadow(0 3px 5px rgba(0,0,0,.18))}',
-      '.dsc-kaka-view-titles{display:flex;flex-direction:column;gap:2px;min-width:0}',
-      '.dsc-kaka-view-title{font-size:15px;font-weight:650;letter-spacing:.01em}',
-      '.dsc-kaka-view-sub{font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
-      '.dsc-kaka-view-tabs{margin-left:auto;display:inline-flex;gap:2px;padding:3px;border-radius:11px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
-      '.dsc-kaka-tab{border:none;background:transparent;padding:5px 13px;border-radius:8px;font-size:12.5px;color:var(--dsw-alias-label-secondary);cursor:pointer;font-family:inherit}',
-      '.dsc-kaka-tab.is-active{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}',
-      '.dsc-kaka-view-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
-      '.dsc-kaka-chip{border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);font-size:12px;padding:4px 11px;border-radius:999px;cursor:pointer;font-family:inherit}',
-      '.dsc-kaka-chip.is-active{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);font-weight:600}',
-      '.dsc-kaka-view-count{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-secondary)}',
-      '.dsc-kaka-paper{position:relative;flex:1;overflow:auto;width:100%;max-width:860px;margin:0 auto;padding:26px 30px 30px;border-radius:16px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 2px 12px rgba(0,0,0,.06);box-sizing:border-box}',
-      '.dsc-kaka-paper::before{content:"";position:absolute;left:0;top:20px;bottom:20px;width:2px;border-radius:2px;background:var(--dsw-alias-brand-primary);opacity:.45}',
-      '.dsc-kaka-paper-meta{display:flex;align-items:baseline;gap:8px;margin:0 0 16px;padding-bottom:12px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
-      '.dsc-kaka-paper-date{font-size:17px;font-weight:650;letter-spacing:.01em}',
-      '.dsc-kaka-paper-week{font-size:11.5px;color:var(--dsw-alias-label-secondary);letter-spacing:.06em}',
-      '.dsc-kaka-prose p{margin:0 0 1.05em;font-size:13.5px;line-height:1.95;color:var(--dsw-alias-label-primary)}',
-      '.dsc-kaka-prose p:last-child{margin-bottom:0}',
-      '.dsc-kaka-prose p.dsc-kaka-lead::first-letter{font-size:1.5em;font-weight:600;color:var(--dsw-alias-brand-primary)}',
-      '.dsc-kaka-prose h3{margin:18px 0 8px;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--dsw-alias-brand-primary);opacity:.9}',
-      '.dsc-kaka-prose h3:first-child{margin-top:0}',
-      '.dsc-kaka-prose ul{margin:0 0 1em;padding-left:18px}',
-      '.dsc-kaka-prose li{font-size:13px;line-height:1.85;margin:0 0 .35em;color:var(--dsw-alias-label-primary)}',
-      '.dsc-kaka-view-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:240px;color:var(--dsw-alias-label-secondary);font-size:12.5px}',
-      '.dsc-kaka-view-empty img{width:64px;height:64px;opacity:.42}',
-      '.dsc-kaka-skel{display:flex;flex-direction:column;gap:13px;padding:8px 2px}',
-      '.dsc-kaka-skel i{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,var(--dsw-alias-bg-layer-2) 25%,var(--dsw-alias-border-l1) 50%,var(--dsw-alias-bg-layer-2) 75%);background-size:200% 100%;animation:dsc-kaka-shimmer 1.4s linear infinite}',
+    var PANEL_CSS = [
+      /* ── 共用排版（浮层里也要用）── */
+      '.dsc-kaka-view-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 0;color:var(--dsw-alias-label-secondary);font-size:12px}',
+      '.dsc-kaka-view-empty img{width:52px;height:52px;opacity:.42}',
+      '.dsc-kaka-skel{display:flex;flex-direction:column;gap:11px;padding:8px 0}',
+      '.dsc-kaka-skel i{display:block;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--dsw-alias-bg-layer-2) 25%,var(--dsw-alias-border-l1) 50%,var(--dsw-alias-bg-layer-2) 75%);background-size:200% 100%;animation:dsc-kaka-shimmer 1.4s linear infinite}',
       '@keyframes dsc-kaka-shimmer{0%{background-position:180% 0}100%{background-position:-80% 0}}',
-      /* ── 关于咔咔 ── */
-      '.dsc-kaka-hero{display:flex;align-items:center;gap:20px;padding-bottom:18px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
-      '.dsc-kaka-halo{position:relative;width:104px;height:104px;flex-shrink:0;display:grid;place-items:center}',
-      '.dsc-kaka-halo img{position:relative;width:92px;height:92px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.22))}',
+      '.dsc-kaka-view-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
+      '.dsc-kaka-chip{border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);font-size:11.5px;padding:3px 10px;border-radius:999px;cursor:pointer;font-family:inherit}',
+      '.dsc-kaka-chip.is-active{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);font-weight:600}',
+      '.dsc-kaka-prose p{margin:0 0 .9em;font-size:12.8px;line-height:1.85;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-prose p:last-child{margin-bottom:0}',
+      '.dsc-kaka-prose p.dsc-kaka-lead::first-letter{font-size:1.4em;font-weight:600;color:var(--dsw-alias-brand-primary)}',
+      '.dsc-kaka-prose h3{margin:14px 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dsw-alias-brand-primary);opacity:.9}',
+      '.dsc-kaka-prose h3:first-child{margin-top:0}',
+      '.dsc-kaka-prose ul{margin:0 0 .9em;padding-left:16px}',
+      '.dsc-kaka-prose li{font-size:12.2px;line-height:1.75;margin:0 0 .3em;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-hero{display:flex;align-items:center;gap:16px;padding-bottom:14px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-halo{position:relative;width:84px;height:84px;flex-shrink:0;display:grid;place-items:center}',
+      '.dsc-kaka-halo img{position:relative;width:74px;height:74px;filter:drop-shadow(0 5px 10px rgba(0,0,0,.22))}',
       '.dsc-kaka-halo::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, transparent), transparent 68%)}',
-      '.dsc-kaka-names{display:flex;flex-direction:column;gap:6px;min-width:0}',
-      '.dsc-kaka-name{margin:0;font-size:24px;font-weight:700;letter-spacing:.01em}',
-      '.dsc-kaka-role{font-size:12.5px;color:var(--dsw-alias-label-secondary)}',
-      '.dsc-kaka-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}',
-      '.dsc-kaka-pill{font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-names{display:flex;flex-direction:column;gap:5px;min-width:0}',
+      '.dsc-kaka-name{font-size:20px;font-weight:700;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-role{font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}',
+      '.dsc-kaka-pill{font-size:10.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary)}',
       '.dsc-kaka-pill.is-brand{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);background:color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent)}',
-      '.dsc-kaka-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(148px, 1fr));gap:10px;margin-top:18px}',
-      '.dsc-kaka-cell{padding:11px 12px;border-radius:12px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
-      '.dsc-kaka-cell-k{font-size:10.5px;letter-spacing:.10em;color:var(--dsw-alias-label-secondary)}',
-      '.dsc-kaka-cell-v{font-size:16.5px;font-weight:650;margin-top:5px;white-space:nowrap;letter-spacing:.01em}',
-      '.dsc-kaka-cell-n{font-size:10.5px;line-height:15px;color:var(--dsw-alias-label-secondary);margin-top:2px}',
-      '.dsc-kaka-foot{display:flex;gap:16px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px dashed var(--dsw-alias-border-l1);font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
-      '.dsc-kaka-foot b{color:var(--dsw-alias-label-primary);font-weight:600}',
+      '.dsc-kaka-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-top:12px}',
+      '.dsc-kaka-cell{padding:8px 10px;border-radius:10px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-cell-k{font-size:9.5px;letter-spacing:.09em;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-cell-v{font-size:14px;font-weight:650;margin-top:3px;white-space:nowrap;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-foot{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px dashed var(--dsw-alias-border-l1);font-size:10.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-panel{position:fixed;z-index:41;width:404px;display:flex;flex-direction:column;border-radius:16px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 18px 48px rgba(0,0,0,.28);overflow:hidden;animation:dsc-kaka-panel-in .18s cubic-bezier(.2,.9,.3,1)}',
+      '@keyframes dsc-kaka-panel-in{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}',
+      '.dsc-kaka-panel-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}',
+      '.dsc-kaka-panel-titles{display:flex;flex-direction:column;gap:1px;min-width:0}',
+      '.dsc-kaka-panel-title{font-size:13.5px;font-weight:650;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-panel-sub{font-size:11px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-panel-close{margin-left:auto;width:24px;height:24px;display:grid;place-items:center;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-family:inherit}',
+      '.dsc-kaka-panel-close:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-panel-tabs{display:flex;gap:2px;padding:2px;margin:0 16px 8px;border-radius:9px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-ptab{flex:1;border:none;background:transparent;padding:4px 6px;border-radius:7px;font-size:11.5px;color:var(--dsw-alias-label-secondary);cursor:pointer;font-family:inherit;white-space:nowrap}',
+      '.dsc-kaka-ptab.is-active{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-weight:600}',
+      '.dsc-kaka-panel-body{padding:2px 16px 16px;overflow:auto;flex:1;min-height:0}',
+      '.dsc-kaka-panel-meta{display:flex;align-items:baseline;gap:8px;margin:0 0 10px;padding-bottom:8px;border-bottom:1px dashed var(--dsw-alias-border-l1)}',
+      '.dsc-kaka-panel-meta b{font-size:14px;font-weight:650;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-panel-meta span{font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-plan-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--dsw-alias-border-l1);font-size:12px;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-plan-row:last-child{border-bottom:none}',
+      '.dsc-kaka-plan-row .when{margin-left:auto;color:var(--dsw-alias-label-secondary);font-size:11px;white-space:nowrap}',
+      '.dsc-kaka-badge{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary);white-space:nowrap}',
+      '.dsc-kaka-panel-action{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 11px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:11.5px;cursor:pointer;font-family:inherit}',
+      '.dsc-kaka-panel-action:hover{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary)}',
+      '.dsc-kaka-ibtn{position:relative;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);cursor:pointer;pointer-events:auto;transition:transform .16s cubic-bezier(.2,.8,.3,1),color .16s,border-color .16s,box-shadow .16s;box-shadow:0 2px 6px rgba(0,0,0,.10)}',
+      '.dsc-kaka-ibtn:hover,.dsc-kaka-ibtn:focus-visible{transform:translateY(-2px) scale(1.14);color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);box-shadow:0 6px 14px rgba(0,0,0,.18);outline:none}',
+      '.dsc-kaka-ibtn.is-open{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}',
+      '.dsc-kaka-ibtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}',
+      '.dsc-kaka-tip{position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;font-size:11.5px;padding:3px 8px;border-radius:7px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease}',
+      '.dsc-kaka-ibtn:hover .dsc-kaka-tip,.dsc-kaka-ibtn:focus-visible .dsc-kaka-tip{opacity:1;transform:translateY(-50%) translateX(0)}',
+      '.dsc-kaka-dock{display:flex;flex-direction:column;gap:6px;pointer-events:auto;opacity:.8;transition:opacity .18s ease}',
+      '.dsc-kaka-dock:hover,.dsc-kaka-dock:focus-within{opacity:1}',
     ].join('')
+
+    var DOCK_ITEMS = [
+      { part: 'about', label: 'dock.about', icon: 'info' },
+      { part: 'diary', label: 'dock.diary', icon: 'book' },
+      { part: 'memory', label: 'dock.memory', icon: 'chip' },
+      { part: 'dream', label: 'dock.dream', icon: 'moon' },
+      { part: 'plan', label: 'dock.plan', icon: 'check' },
+    ]
+
+    var DOCK_ICONS = {
+      info: [['circle', { cx: 12, cy: 12, r: 9 }], ['path', { d: 'M12 11v5M12 8h.01' }]],
+      book: [['path', { d: 'M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z' }], ['path', { d: 'M5 4v16M9 8h6M9 12h6' }]],
+      chip: [['rect', { x: 7, y: 7, width: 10, height: 10, rx: 2 }], ['path', { d: 'M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3' }]],
+      moon: [['path', { d: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z' }]],
+      check: [['path', { d: 'M4 7l2 2 3-3M4 15l2 2 3-3M12 8h8M12 16h8' }]],
+    }
 
     var WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
@@ -1184,6 +1282,19 @@ window.__ModuleLoader__.load({
     var PHASE_KEYS = {
       awake: 'phase.awake', quiet: 'phase.quiet', diary: 'phase.diary',
       dreaming: 'phase.dreaming', sleeping: 'phase.sleeping',
+    }
+
+    var EVENT_KEYS = {
+      reminder: 'plan.kind.reminder', wake: 'plan.kind.wake',
+      diary: 'plan.kind.diary', dream: 'plan.kind.dream',
+    }
+
+    /** 渲染一个图标（内联 SVG，跟随 currentColor）。 */
+    function DockIcon(props) {
+      var shape = DOCK_ICONS[props.name] || DOCK_ICONS.info
+      return h('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, shape.map(function (entry, index) {
+        return h(entry[0], Object.assign({ key: 'i' + index }, entry[1]))
+      }))
     }
 
     /** 'YYYY-MM-DD' → '11 月 14 日'。 */
@@ -1205,6 +1316,12 @@ window.__ModuleLoader__.load({
     function formatBirthday(stamp) {
       var date = new Date(Number(stamp) || Date.now())
       return (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日'
+    }
+
+    /** 时间戳 → 'HH:mm'。 */
+    function formatClock(stamp) {
+      var date = new Date(Number(stamp) || Date.now())
+      return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
     }
 
     /** 毫秒 → '1 天 2 小时' / '3 小时 5 分钟' / '5 分钟'。 */
@@ -1256,34 +1373,28 @@ window.__ModuleLoader__.load({
       var t = props.t
       var data = props.data
       if (!data) {
-        return h('div', { className: 'dsc-kaka-skel' },
-          h('i', { style: { width: '60%' } }),
-          h('i', { style: { width: '92%' } }),
-          h('i', { style: { width: '84%' } }))
+        return h('div', { className: 'dsc-kaka-skel' }, h('i', { style: { width: '70%' } }), h('i', { style: { width: '92%' } }))
       }
-
       var stats = data.stats || {}
       var birthday = Number(data.birthday) || Date.now()
       var days = Math.max(1, Math.floor((Date.now() - birthday) / 86400000) + 1)
       var moodLabel = t(MOOD_KEYS[data.mood] || 'mood.idle')
       var phaseLabel = t(PHASE_KEYS[data.phase] || 'phase.awake')
-
       var cells = [
-        { k: t('about.companion'), v: formatDuration(data.companionMs, t), n: t('about.companionNote') },
-        { k: t('about.birthday'), v: formatBirthday(birthday), n: t('about.birthdayNote').replace('{n}', String(days)) },
-        { k: t('about.turns'), v: String(stats.turns || 0), n: t('about.turnsNote') },
-        { k: t('about.memory'), v: (stats.memoryChars || 0) + ' ' + t('view.chars'), n: t('about.memoryNote').replace('{a}', String(stats.memoryAgent || 0)).replace('{u}', String(stats.memoryUser || 0)) },
-        { k: t('about.diary'), v: (stats.diaryDays || 0) + ' ' + t('about.days'), n: t('about.diaryNote') },
-        { k: t('about.dream'), v: (stats.dreamCount || 0) + ' ' + t('about.dreamUnit'), n: t('about.dreamNote') },
-        { k: t('about.voice'), v: '¥' + (stats.yuan || 0), n: t('about.voiceNote').replace('{c}', String(stats.billedChars || 0)).replace('{n}', String(stats.voiceCalls || 0)) },
-        { k: t('about.mood'), v: moodLabel + ' · ' + phaseLabel, n: t('about.moodNote').replace('{v}', String(data.voice || '')) },
+        { k: t('about.companion'), v: formatDuration(data.companionMs, t) },
+        { k: t('about.birthday'), v: formatBirthday(birthday) },
+        { k: t('about.turns'), v: String(stats.turns || 0) },
+        { k: t('about.memory'), v: (stats.memoryChars || 0) + ' ' + t('view.chars') },
+        { k: t('about.diary'), v: (stats.diaryDays || 0) + ' ' + t('about.days') },
+        { k: t('about.dream'), v: (stats.dreamCount || 0) + ' ' + t('about.dreamUnit') },
+        { k: t('about.voice'), v: '¥' + (stats.yuan || 0) },
+        { k: t('about.mood'), v: moodLabel + ' · ' + phaseLabel },
       ]
-
       return h(React.Fragment, null,
         h('div', { className: 'dsc-kaka-hero' },
           h('div', { className: 'dsc-kaka-halo' }, h('img', { src: ASSET, alt: '' })),
           h('div', { className: 'dsc-kaka-names' },
-            h('h1', { className: 'dsc-kaka-name' }, data.name || t('view.title')),
+            h('div', { className: 'dsc-kaka-name' }, data.name || t('view.title')),
             h('div', { className: 'dsc-kaka-role' }, (data.species || '') + ' · ' + (data.role || '')),
             h('div', { className: 'dsc-kaka-pills' },
               h('span', { className: 'dsc-kaka-pill is-brand' }, '「' + (data.quote || '') + '」'),
@@ -1293,44 +1404,36 @@ window.__ModuleLoader__.load({
         h('div', { className: 'dsc-kaka-grid' }, cells.map(function (cell, index) {
           return h('div', { className: 'dsc-kaka-cell', key: 'c' + index },
             h('div', { className: 'dsc-kaka-cell-k' }, cell.k),
-            h('div', { className: 'dsc-kaka-cell-v' }, cell.v),
-            h('div', { className: 'dsc-kaka-cell-n' }, cell.n))
+            h('div', { className: 'dsc-kaka-cell-v' }, cell.v))
         })),
         h('div', { className: 'dsc-kaka-foot' },
           h('span', null, t('about.footerData')),
-          h('span', null, t('about.footerShared')),
-          h('span', null, t('about.footerKeep'))),
+          h('span', null, t('about.footerShared'))),
       )
     }
 
-    /** 对话区里的「咔咔」页签：关于 / 日记 / 梦 / 记忆。 */
-    function KakaView(props) {
+    /**
+     * 咔咔的小本子（浮层）。由宠物旁的图标坞打开，五个分片：
+     * 关于 / 日记 / 记忆 / 梦 / 她的日程。
+     */
+    function KakaPanel(props) {
       var t = props.t
-      // 双保险：页签由守门组件按预设动态登记，这里再看一眼预设，免得回收延迟时露出空白页
-      var preset = typeof props.useSessions === 'function' && props.sessionId
-        ? props.useSessions(function (snapshot) {
-          return snapshot && snapshot.byId && snapshot.byId[props.sessionId]
-            ? (snapshot.byId[props.sessionId].projectionValues && snapshot.byId[props.sessionId].projectionValues.agentPreset)
-            : undefined
-        })
-        : undefined
-      // initialView 是渲染测试的注入口；真实运行全靠下面的 effect 拉取
-      var seed = props.initialView || {}
-      var [part, setPart] = useState(seed.part || 'about')
-      var [meta, setMeta] = useState(seed.meta || null)
-      var [about, setAbout] = useState(seed.about || null)
-      var [day, setDay] = useState(seed.day || '')
-      var [target, setTarget] = useState(seed.target || 'agent')
-      var [text, setText] = useState(seed.text || '')
+      var initialPart = props.part || 'about'
+      var [part, setPart] = useState(initialPart)
+      var [meta, setMeta] = useState(null)
+      var [about, setAbout] = useState(null)
+      var [day, setDay] = useState('')
+      var [target, setTarget] = useState('agent')
+      var [text, setText] = useState('')
+      var [plan, setPlan] = useState([])
       var [loading, setLoading] = useState(false)
+      var [note, setNote] = useState('')
       var [error, setError] = useState('')
 
-      useEffect(function () {
-        kakaTabOpen = true
-        return function () { kakaTabOpen = false }
-      }, [])
+      // 图标坞切换分片时同步
+      useEffect(function () { setPart(initialPart) }, [initialPart])
 
-      var loadMeta = useCallback(function () {
+      useEffect(function () {
         getJson(API + '/view?part=meta')
           .then(function (payload) { if (payload && payload.ok) setMeta(payload) })
           .catch(function (err) { setError(String(err && err.message || err)) })
@@ -1339,14 +1442,19 @@ window.__ModuleLoader__.load({
           .catch(function (err) { setError(String(err && err.message || err)) })
       }, [])
 
-      useEffect(function () { loadMeta() }, [loadMeta])
+      useEffect(function () {
+        if (part !== 'plan') return function () {}
+        var cancelled = false
+        getJson(API + '/life/state')
+          .then(function (payload) { if (!cancelled && payload && payload.ok) setPlan(payload.events || []) })
+          .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
+        return function () { cancelled = true }
+      }, [part])
 
       useEffect(function () {
-        if (part === 'about') return function () {}
-
+        if (part === 'about' || part === 'plan') return function () {}
         var cancelled = false
         setError('')
-
         if (part === 'memory') {
           setLoading(true)
           getJson(API + '/view?part=memory&target=' + encodeURIComponent(target))
@@ -1359,7 +1467,6 @@ window.__ModuleLoader__.load({
             .then(function () { if (!cancelled) setLoading(false) })
           return function () { cancelled = true }
         }
-
         var list = (part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []
         var selected = day && list.indexOf(day) >= 0 ? day : (list[0] || '')
         if (!selected) {
@@ -1379,62 +1486,65 @@ window.__ModuleLoader__.load({
         return function () { cancelled = true }
       }, [part, day, target, meta, t])
 
-      var parts = [
-        { value: 'about', label: t('about.tab') },
-        { value: 'diary', label: t('view.diary') },
-        { value: 'dream', label: t('view.dream') },
-        { value: 'memory', label: t('view.memory') },
-      ]
-
-      var chips = null
-      var countLabel = ''
-      if (part === 'memory') {
-        chips = [
-          { value: 'agent', label: t('view.agent') },
-          { value: 'user', label: t('view.user') },
-        ].map(function (item) {
-          return h('button', {
-            key: item.value,
-            type: 'button',
-            className: 'dsc-kaka-chip' + (target === item.value ? ' is-active' : ''),
-            onClick: function () { setTarget(item.value) },
-          }, item.label)
-        })
-        if (meta && meta.memory) {
-          countLabel = (target === 'user' ? meta.memory.user : meta.memory.agent) + ' ' + t('view.chars')
-        }
-      } else if (part !== 'about') {
-        var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
-        chips = days.map(function (item) {
-          return h('button', {
-            key: item,
-            type: 'button',
-            className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
-            onClick: function () { setDay(item) },
-          }, item)
-        })
+      var titles = {
+        about: t('dock.about'), diary: t('view.diary'), memory: t('view.memory'),
+        dream: t('view.dream'), plan: t('dock.plan'),
       }
 
-      var headerSub = about
-        ? (about.species || '') + ' · ' + (about.role || '')
-        : t('view.loading')
+      var chips = null
+      if (part === 'memory') {
+        chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
+          [
+            { value: 'agent', label: t('view.agent') },
+            { value: 'user', label: t('view.user') },
+          ].map(function (item) {
+            return h('button', {
+              key: item.value,
+              type: 'button',
+              className: 'dsc-kaka-chip' + (target === item.value ? ' is-active' : ''),
+              onClick: function () { setTarget(item.value) },
+            }, item.label)
+          }))
+      } else if (part === 'diary' || part === 'dream') {
+        var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
+        chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
+          days.map(function (item) {
+            return h('button', {
+              key: item,
+              type: 'button',
+              className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
+              onClick: function () { setDay(item) },
+            }, item)
+          }))
+      }
 
       var body
       if (part === 'about') {
         body = h(KakaAbout, { t: t, data: about })
+      } else if (part === 'plan') {
+        body = plan.length
+          ? h('div', null, plan
+            .slice()
+            .sort(function (a, b) { return a.dueAt - b.dueAt })
+            .map(function (event) {
+              var label = t(EVENT_KEYS[event.kind] || 'plan.kind.other')
+              return h('div', { className: 'dsc-kaka-plan-row', key: event.id },
+                h('span', { className: 'dsc-kaka-badge' }, label),
+                h('span', null, event.what || t('plan.noWhat')),
+                h('span', { className: 'when' }, formatClock(event.dueAt)))
+            }))
+          : h('div', { className: 'dsc-kaka-view-empty' },
+            h('img', { src: ASSET, alt: '' }),
+            h('div', null, t('plan.empty')))
       } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
-          h('i', { style: { width: '92%' } }),
-          h('i', { style: { width: '86%' } }),
-          h('i', { style: { width: '64%' } }),
-          h('i', { style: { width: '78%' } }))
+          h('i', { style: { width: '92%' } }), h('i', { style: { width: '78%' } }), h('i', { style: { width: '64%' } }))
       } else if (!text) {
         body = h('div', { className: 'dsc-kaka-view-empty' },
           h('img', { src: ASSET, alt: '' }),
           h('div', null, t('view.empty')))
       } else if (part === 'memory') {
-        var blocks = parseMemory(text)
-        body = h('div', { className: 'dsc-kaka-prose' }, blocks.map(function (block, index) {
+        body = h('div', { className: 'dsc-kaka-prose' }, parseMemory(text).map(function (block, index) {
           var key = 'b' + index
           if (block.type === 'heading') return h('h3', { key }, block.text)
           if (block.type === 'list') {
@@ -1445,51 +1555,56 @@ window.__ModuleLoader__.load({
           return h('p', { key }, block.text)
         }))
       } else {
-        var paragraphs = splitProse(text)
-        body = h('div', { className: 'dsc-kaka-prose' }, paragraphs.map(function (paragraph, index) {
-          return h('p', {
-            key: 'p' + index,
-            className: index === 0 ? 'dsc-kaka-lead' : undefined,
-          }, paragraph)
-        }))
+        var selectedDay = day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || ''
+        body = h(React.Fragment, null,
+          selectedDay
+            ? h('div', { className: 'dsc-kaka-panel-meta' },
+              h('b', null, formatDayTitle(selectedDay)),
+              h('span', null, weekdayOf(selectedDay)))
+            : null,
+          h('div', { className: 'dsc-kaka-prose' }, splitProse(text).map(function (paragraph, index) {
+            return h('p', { key: 'p' + index, className: index === 0 ? 'dsc-kaka-lead' : undefined }, paragraph)
+          })))
       }
 
-      if (preset !== undefined && preset !== PRESET_ID) return null
+      var dreamAction = part === 'dream'
+        ? h('button', {
+          type: 'button',
+          className: 'dsc-kaka-panel-action',
+          onClick: function () {
+            postJson(API + '/life/force', { kind: 'dream' })
+              .then(function () { setNote(t('dream.queued')) })
+              .catch(function (err) { setNote(String(err && err.message || err)) })
+          },
+        }, t('dream.action'))
+        : null
 
-      var selectedDay = part === 'about' || part === 'memory'
-        ? ''
-        : (day || ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || [])[0] || '')
-
-      return h('div', { className: 'dsc-kaka-view' },
-        h('style', null, VIEW_CSS),
-        h('div', { className: 'dsc-kaka-view-head' },
-          h('img', { className: 'dsc-kaka-view-avatar', src: ASSET, alt: '' }),
-          h('div', { className: 'dsc-kaka-view-titles' },
-            h('div', { className: 'dsc-kaka-view-title' }, t('view.title')),
-            h('div', { className: 'dsc-kaka-view-sub' }, headerSub)),
-          h('div', { className: 'dsc-kaka-view-tabs' }, parts.map(function (item) {
-            return h('button', {
-              key: item.value,
-              type: 'button',
-              className: 'dsc-kaka-tab' + (part === item.value ? ' is-active' : ''),
-              onClick: function () { setPart(item.value); setDay('') },
-            }, item.label)
-          }))),
-        chips && chips.length
-          ? h('div', { className: 'dsc-kaka-view-chips' },
-            chips,
-            countLabel ? h('span', { className: 'dsc-kaka-view-count' }, countLabel) : null)
-          : null,
-        error
-          ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error)
-          : null,
-        h('article', { className: 'dsc-kaka-paper' },
-          selectedDay
-            ? h('div', { className: 'dsc-kaka-paper-meta' },
-              h('span', { className: 'dsc-kaka-paper-date' }, formatDayTitle(selectedDay)),
-              h('span', { className: 'dsc-kaka-paper-week' }, weekdayOf(selectedDay)))
-            : null,
-          body),
+      return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true' },
+        h('div', { className: 'dsc-kaka-panel-head' },
+          h('div', { className: 'dsc-kaka-panel-titles' },
+            h('div', { className: 'dsc-kaka-panel-title' }, titles[part] || t('panel.title')),
+            h('div', { className: 'dsc-kaka-panel-sub' },
+              about ? (about.species || '') + ' · ' + formatDuration(about.companionMs, t) : t('view.loading'))),
+          h('button', {
+            type: 'button',
+            className: 'dsc-kaka-panel-close',
+            'aria-label': t('panel.close'),
+            onClick: function () { if (props.onClose) props.onClose() },
+          }, '✕')),
+        h('div', { className: 'dsc-kaka-panel-tabs' }, DOCK_ITEMS.map(function (item) {
+          return h('button', {
+            key: item.part,
+            type: 'button',
+            className: 'dsc-kaka-ptab' + (part === item.part ? ' is-active' : ''),
+            onClick: function () { setPart(item.part); setDay('') },
+          }, t(item.label))
+        })),
+        h('div', { className: 'dsc-kaka-panel-body' },
+          chips,
+          error ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error) : null,
+          body,
+          note ? h('div', { className: 'dsc-kaka-panel-sub', style: { marginTop: 10 } }, note) : null,
+          dreamAction),
       )
     }
 
@@ -1522,68 +1637,6 @@ window.__ModuleLoader__.load({
         }, function KakaPetSlot(props) { return h(PetBoundary, null, h(KakaPet, props)) })
       })
 
-      // 对话页签：因为槽位没有"按会话条件注册"的选项，这里用一个小守门组件
-      // 盯着"当前会话的预设"：是咔咔就登记这个视图，不是就注销。
-      // 注销后页签本身会从对话头部消失，而不是留一个点进去空白的标签。
-      function registerKakaView() {
-        return ctx.slots.inject('conversation.view', function () {
-          return ctx.slots.register({
-            name: 'conversation.view',
-            id: 'kaka',
-            order: 5,
-            label: function () { return t('view.title') },
-            inject: function () { return { t: t } },
-          }, function KakaViewSlot(props) { return h(PetBoundary, null, h(KakaView, props)) })
-        })
-      }
-
-      kakaViewRegistrar = registerKakaView
-
-      function KakaViewGate(props) {
-        var useSessions = props.useSessions
-        var current = typeof useSessions === 'function'
-          ? useSessions(function (snapshot) { return snapshot && snapshot.current })
-          : undefined
-        var preset = typeof useSessions === 'function'
-          ? useSessions(function (snapshot) {
-            return current && snapshot && snapshot.byId && snapshot.byId[current]
-              ? (snapshot.byId[current].projectionValues && snapshot.byId[current].projectionValues.agentPreset)
-              : undefined
-          })
-          : undefined
-        var disposeRef = useRef(null)
-
-        useEffect(function () {
-          var shouldShow = preset === PRESET_ID
-          if (shouldShow && !disposeRef.current) {
-            disposeRef.current = registerKakaView()
-          } else if (!shouldShow && disposeRef.current) {
-            try { disposeRef.current() } catch (err) { /* ignore */ }
-            disposeRef.current = null
-          }
-          return undefined
-        }, [preset])
-
-        useEffect(function () {
-          return function () {
-            if (disposeRef.current) {
-              try { disposeRef.current() } catch (err) { /* ignore */ }
-              disposeRef.current = null
-            }
-          }
-        }, [])
-
-        return null
-      }
-
-      ctx.slots.inject('shell.overlay', function () {
-        return ctx.slots.register({
-          name: 'shell.overlay',
-          id: PLUGIN_ID + '-view-gate',
-          order: 5,
-        }, function KakaViewGateSlot(props) { return h(PetBoundary, null, h(KakaViewGate, props)) })
-      })
-
       // 设置页：放在「插件」设置里的一个 tab
       ctx.slots.inject('settings.plugins.tab', function () {
         return ctx.slots.register({
@@ -1601,11 +1654,12 @@ window.__ModuleLoader__.load({
     exports.apply = apply
     // 给渲染测试用的纯函数（不参与真实运行）
     exports.__test = {
+      KakaAbout: KakaAbout,
+      KakaPanel: KakaPanel,
       splitProse: splitProse,
       parseMemory: parseMemory,
       formatDayTitle: formatDayTitle,
       weekdayOf: weekdayOf,
-      registerView: function () { return kakaViewRegistrar ? kakaViewRegistrar() : undefined },
     }
     return module.exports
   },
