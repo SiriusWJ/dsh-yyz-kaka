@@ -731,19 +731,26 @@ window.__ModuleLoader__.load({
         var node = anchorRef.current
         if (!node) return undefined
         var update = function () {
-          // 锚点是 0×0 的 span，量不到输入框的右边界；往上找一个有宽度的祖先（输入框卡片）。
+          // 锚点是 0×0 的 span，量不到输入框边界；要的是输入框卡片本身。
+          // 宿主给输入框卡片打了 data-composer-card，优先用它；找不到再退化为"最宽的祖先"。
           var host = node
           var hostBox = node.getBoundingClientRect()
-          for (var level = 0; level < 4; level += 1) {
+          for (var level = 0; level < 6; level += 1) {
             var parent = host.parentElement
             if (!parent) break
-            var candidate = parent.getBoundingClientRect()
-            if (candidate.width > hostBox.width) { host = parent; hostBox = candidate }
-            if (candidate.width > 240) break
+            host = parent
+            hostBox = parent.getBoundingClientRect()
+            try {
+              if (parent.matches && parent.matches('[data-composer-card]')) break
+            } catch (err) { /* ignore */ }
           }
           var box = hostBox
           if (!box || (box.width === 0 && box.height === 0 && box.top === 0)) return
           setRect({ left: box.left, top: box.top, bottom: box.bottom, right: box.right, width: box.width, height: box.height })
+          if (!window.__kakaPetRectLogged) {
+            window.__kakaPetRectLogged = true
+            try { console.info('[kaka] 输入框卡片 rect', box.left, box.top, box.right, box.width) } catch (err) { /* ignore */ }
+          }
         }
         update()
         var observer = null
