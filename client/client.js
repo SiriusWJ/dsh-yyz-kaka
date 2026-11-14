@@ -52,6 +52,15 @@ window.__ModuleLoader__.load({
         'pet.pokeTip': '点一下 = 戳戳她',
         'settings.title': '咔咔',
         'settings.subtitle': '宠物、嗓子、提示与作息',
+        'view.title': '咔咔',
+        'view.diary': '日记',
+        'view.dream': '梦',
+        'view.memory': '记忆',
+        'view.agent': '长记忆',
+        'view.user': '主人画像',
+        'view.empty': '这里还空着',
+        'view.loading': '读取中…',
+        'view.hint': '这些都是咔咔自己的小本子，所有咔咔会话共享。',
         'group.pet': '宠物',
         'group.voice': '嗓子',
         'group.notify': '提示',
@@ -127,6 +136,15 @@ window.__ModuleLoader__.load({
         'pet.pokeTip': 'Click to poke her',
         'settings.title': 'Kaka',
         'settings.subtitle': 'Pet, voice, notifications and rhythm',
+        'view.title': 'Kaka',
+        'view.diary': 'Journal',
+        'view.dream': 'Dreams',
+        'view.memory': 'Memory',
+        'view.agent': 'Long memory',
+        'view.user': 'Owner profile',
+        'view.empty': 'Nothing here yet',
+        'view.loading': 'Loading…',
+        'view.hint': "Kaka's own notebooks, shared by every Kaka session.",
         'group.pet': 'Pet',
         'group.voice': 'Voice',
         'group.notify': 'Notifications',
@@ -412,6 +430,8 @@ window.__ModuleLoader__.load({
       var [settings, setSettings] = useState(props.initialSettings || null)
       var [busy, setBusy] = useState(false)
       var [hover, setHover] = useState(false)
+      // 只有「对话」页签才显示宠物；切到咔咔/轨迹/上下文等页签时让位。
+      var [viewId, setViewId] = useState(readViewId(sessionId))
       var cursorRef = useRef(0)
       var bubbleTimer = useRef(null)
       var pokeTimer = useRef(null)
@@ -557,8 +577,21 @@ window.__ModuleLoader__.load({
           .catch(function () {})
       }, [sessionId, showBubble, t])
 
-      if (!isKaka) {
-        // 非咔咔会话：只留一个 0 尺寸锚点，不渲染任何视觉
+      // 页签同步：对话 shell 把选中的 view 存在 localStorage，轮询一下即可跟随
+      useEffect(function () {
+        if (!isKaka) return undefined
+        var timer = setInterval(function () {
+          setViewId(function (current) {
+            var next = kakaTabOpen ? 'kaka' : readViewId(sessionId)
+            return next === current ? current : next
+          })
+        }, 800)
+        return function () { clearInterval(timer) }
+      }, [isKaka, sessionId])
+
+      var showPet = isKaka && viewId === 'chat' && !kakaTabOpen
+      if (!showPet) {
+        // 非咔咔会话 / 不在「对话」页签：只留一个 0 尺寸锚点
         return h('span', { ref: anchorRef, style: { display: 'inline-block', width: 0, height: 0 } })
       }
       if (!settings || !settings.pet || settings.pet.enabled === false) {
@@ -1003,6 +1036,146 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // ============================================================ 咔咔页签（对话视图）
+
+    /** 当前会话选中的对话页签；null 或缺失都表示默认的「对话」。 */
+    function readViewId(sessionId) {
+      try {
+        if (typeof localStorage === 'undefined' || !sessionId) return 'chat'
+        var raw = localStorage.getItem('dsh.conversation.' + sessionId)
+        if (!raw) return 'chat'
+        var parsed = JSON.parse(raw)
+        return parsed && typeof parsed.view === 'string' ? parsed.view : 'chat'
+      } catch (err) {
+        return 'chat'
+      }
+    }
+
+    /** 咔咔页签打开时置位：宠物要立刻让位，不必等轮询。 */
+    var kakaTabOpen = false
+
+    var VIEW_CSS = [
+      '.dsc-kaka-view{display:flex;flex-direction:column;gap:12px;padding:18px 22px 30px;min-height:100%;box-sizing:border-box}',
+      '.dsc-kaka-view-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}',
+      '.dsc-kaka-view-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary)}',
+      '.dsc-kaka-view-hint{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-view-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
+      '.dsc-kaka-view-body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:21px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:14px 16px;overflow:auto;flex:1;min-height:240px;margin:0;font-family:inherit}',
+      '.dsc-kaka-view-empty{color:var(--dsw-alias-label-secondary);font-size:13px}',
+    ].join('')
+
+    /** 对话区里的「咔咔」页签：日记 / 梦 / 记忆。 */
+    function KakaView(props) {
+      var t = props.t
+      var [part, setPart] = useState('diary')
+      var [meta, setMeta] = useState(null)
+      var [day, setDay] = useState('')
+      var [target, setTarget] = useState('agent')
+      var [text, setText] = useState('')
+      var [error, setError] = useState('')
+
+      useEffect(function () {
+        kakaTabOpen = true
+        return function () { kakaTabOpen = false }
+      }, [])
+
+      useEffect(function () {
+        getJson(API + '/view?part=meta')
+          .then(function (payload) { if (payload && payload.ok) setMeta(payload) })
+          .catch(function (err) { setError(String(err && err.message || err)) })
+      }, [])
+
+      useEffect(function () {
+        var cancelled = false
+        setError('')
+
+        if (part === 'memory') {
+          setText(t('view.loading'))
+          getJson(API + '/view?part=memory&target=' + encodeURIComponent(target))
+            .then(function (payload) {
+              if (cancelled) return
+              if (payload && payload.ok) setText(payload.text || '')
+              else setError(String(payload && payload.error || 'load failed'))
+            })
+            .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
+          return function () { cancelled = true }
+        }
+
+        var list = (part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []
+        var selected = day && list.indexOf(day) >= 0 ? day : (list[0] || '')
+        if (!selected) {
+          setText('')
+          return function () { cancelled = true }
+        }
+        if (selected !== day) setDay(selected)
+        setText(t('view.loading'))
+        getJson(API + '/view?part=' + part + '&date=' + encodeURIComponent(selected))
+          .then(function (payload) {
+            if (cancelled) return
+            if (payload && payload.ok) setText(payload.text || '')
+            else setError(String(payload && payload.error || 'load failed'))
+          })
+          .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
+        return function () { cancelled = true }
+      }, [part, day, target, meta, t])
+
+      var parts = [
+        { value: 'diary', label: t('view.diary') },
+        { value: 'dream', label: t('view.dream') },
+        { value: 'memory', label: t('view.memory') },
+      ]
+
+      var chips
+      if (part === 'memory') {
+        chips = [
+          { value: 'agent', label: t('view.agent') },
+          { value: 'user', label: t('view.user') },
+        ].map(function (item) {
+          return h('button', {
+            key: item.value,
+            type: 'button',
+            className: 'dsc-kaka-btn',
+            'data-active': target === item.value ? 'true' : 'false',
+            style: target === item.value
+              ? { background: 'var(--dsw-alias-bg-layer-2)', fontWeight: 600 }
+              : undefined,
+            onClick: function () { setTarget(item.value) },
+          }, item.label)
+        })
+      } else {
+        var days = ((part === 'diary' ? (meta && meta.days) : (meta && meta.dreams)) || []).slice(0, 8)
+        chips = days.map(function (item) {
+          return h('button', {
+            key: item,
+            type: 'button',
+            className: 'dsc-kaka-btn',
+            style: day === item
+              ? { background: 'var(--dsw-alias-bg-layer-2)', fontWeight: 600 }
+              : undefined,
+            onClick: function () { setDay(item) },
+          }, item)
+        })
+      }
+
+      return h('div', { className: 'dsc-kaka-view' },
+        h('style', null, VIEW_CSS),
+        h('div', { className: 'dsc-kaka-view-head' },
+          h('div', { className: 'dsc-kaka-view-title' }, t('view.title')),
+          h(Segmented, {
+            value: part,
+            options: parts,
+            onChange: function (value) { setPart(value); setDay('') },
+          })),
+        h('div', { className: 'dsc-kaka-view-hint' }, t('view.hint')),
+        chips && chips.length ? h('div', { className: 'dsc-kaka-view-chips' }, chips) : null,
+        error
+          ? h('div', { className: 'dsc-kaka-view-empty', style: { color: 'var(--dsw-alias-state-error-primary)' } }, error)
+          : null,
+        h('pre', { className: 'dsc-kaka-view-body' },
+          text || h('span', { className: 'dsc-kaka-view-empty' }, t('view.empty'))),
+      )
+    }
+
     // ============================================================ 注册
 
     function apply(ctx) {
@@ -1032,12 +1205,23 @@ window.__ModuleLoader__.load({
         }, function KakaPetSlot(props) { return h(PetBoundary, null, h(KakaPet, props)) })
       })
 
-      // 设置页：独立的「咔咔」栏
-      ctx.slots.inject('settings.section', function () {
+      // 对话页签：只在咔咔会话里出现的「咔咔」视图（日记 / 梦 / 记忆）
+      ctx.slots.inject('conversation.view', function () {
         return ctx.slots.register({
-          name: 'settings.section',
+          name: 'conversation.view',
           id: 'kaka',
-          order: 25,
+          order: 5,
+          label: function () { return t('view.title') },
+          inject: function () { return { t: t } },
+        }, function KakaViewSlot(props) { return h(PetBoundary, null, h(KakaView, props)) })
+      })
+
+      // 设置页：放在「插件」设置里的一个 tab
+      ctx.slots.inject('settings.plugins.tab', function () {
+        return ctx.slots.register({
+          name: 'settings.plugins.tab',
+          id: 'kaka',
+          order: 20,
           label: function () { return t('settings.title') },
           inject: function () { return { t: t, openSession: openSessionById } },
         }, function KakaSettingsSlot(props) { return h(PetBoundary, null, h(KakaSettings, props)) })

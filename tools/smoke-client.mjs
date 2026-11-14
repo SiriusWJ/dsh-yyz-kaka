@@ -210,10 +210,12 @@ if (!Array.isArray(exported.inject) || !exported.inject.includes('slots')) throw
 exported.apply(ctx)
 
 const petSlot = registrations.find(item => item.options.name === 'conversation.input.overlay')
-const settingsSlot = registrations.find(item => item.options.name === 'settings.section')
-if (!petSlot || !settingsSlot) throw new Error('缺少宠物或设置页槽位')
+const settingsSlot = registrations.find(item => item.options.name === 'settings.plugins.tab')
+const viewSlot = registrations.find(item => item.options.name === 'conversation.view')
+if (!petSlot || !settingsSlot || !viewSlot) throw new Error('缺少宠物 / 设置 tab / 对话视图槽位')
 if (petSlot.options.id !== 'dsh-yyz-kaka-pet') throw new Error(`宠物槽位 id 变了：${petSlot.options.id}`)
-if (settingsSlot.options.id !== 'kaka') throw new Error(`设置栏 id 变了：${settingsSlot.options.id}`)
+if (settingsSlot.options.id !== 'kaka') throw new Error(`设置 tab id 变了：${settingsSlot.options.id}`)
+if (viewSlot.options.id !== 'kaka') throw new Error(`对话视图 id 变了：${viewSlot.options.id}`)
 
 const t = key => key
 const petSettings = {
@@ -227,7 +229,17 @@ const useSessionsFor = preset => selector => selector({
   byId: { 'session-x': { projectionValues: { agentPreset: preset } } },
 })
 
+/** 让组件的 localStorage 读到的当前页签是 view。 */
+function setStoredView(view) {
+  globalThis.localStorage = {
+    getItem: key => (String(key).startsWith('dsh.conversation.') ? JSON.stringify({ view }) : null),
+    setItem: () => {},
+    removeItem: () => {},
+  }
+}
+
 // 1) 非咔咔会话：只渲染 0 尺寸锚点
+setStoredView('chat')
 const idleMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
   t,
@@ -237,7 +249,7 @@ const idleMarkup = render(React.createElement(petSlot.component, {
 if (idleMarkup.includes('#img')) throw new Error('非咔咔会话不应该渲染宠物图片')
 if (!idleMarkup.includes('#span')) throw new Error(`非咔咔会话应该只渲染锚点 span：${idleMarkup.slice(0, 120)}`)
 
-// 2) 咔咔会话：完整走一遍 render body（样式、心情、气泡）
+// 2) 咔咔会话 + 对话页签：完整走一遍 render body（样式、心情、气泡）
 const kakaRender = renderRoot(React.createElement(petSlot.component, {
   sessionId: 'session-x',
   t,
@@ -261,7 +273,19 @@ const pokeCall = fetchCalls.find(call => call.url.includes('/kaka/poke'))
 if (String(pokeCall.options.method) !== 'POST') throw new Error('戳一戳应该用 POST')
 if (!String(pokeCall.options.body || '').includes('session-x')) throw new Error('戳一戳应该带上会话 id')
 
-// 3) 关闭宠物：不渲染
+// 2c) 切到轨迹页签：宠物必须让位
+setStoredView('trajectory')
+const trajectoryMarkup = render(React.createElement(petSlot.component, {
+  sessionId: 'session-x',
+  t,
+  initialSettings: petSettings,
+  useSessions: useSessionsFor('kaka'),
+}))
+if (trajectoryMarkup.includes('#img')) throw new Error('轨迹页签不应该渲染宠物')
+if (!trajectoryMarkup.includes('#span')) throw new Error('轨迹页签应该只留锚点')
+
+// 2d) 关闭宠物：不渲染
+setStoredView('chat')
 const disabledMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
   t,
@@ -270,7 +294,7 @@ const disabledMarkup = render(React.createElement(petSlot.component, {
 }))
 if (disabledMarkup.includes('#img')) throw new Error('关闭宠物后不应该渲染图片')
 
-// 4) 设置页：加载态 + 带数据的完整渲染
+// 3) 设置 tab：加载态 + 带数据的完整渲染
 const settingsEmpty = render(React.createElement(settingsSlot.component, {
   t,
   close: () => {},
@@ -286,6 +310,15 @@ const settingsMarkup = render(React.createElement(settingsSlot.component, {
 }))
 for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'group.data', 'row.petEnabled', 'action.selftest', 'row.diary']) {
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
+}
+
+// 4) 咔咔对话页签：三个分片 + 容器
+const viewMarkup = render(React.createElement(viewSlot.component, {
+  t,
+  sessionId: 'session-x',
+}))
+for (const key of ['dsc-kaka-view', 'view.diary', 'view.dream', 'view.memory']) {
+  if (!viewMarkup.includes(key)) throw new Error(`咔咔页签缺少内容：${key}`)
 }
 
 console.log('注入槽位 :', injected.join(', '))

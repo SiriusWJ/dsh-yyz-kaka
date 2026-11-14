@@ -17,7 +17,7 @@
 | 7 | 点螃蟹 → 被摸反馈；空闲投递；忙时只动画 | ✅ | 三条都实测：① 客户端渲染测试里点宠物 → 断言发出 `POST /kaka/poke` 且带会话 id；② 空闲时 `delivered: true`，她回「咔嚓——钳子被戳得痒痒的！」；③ 让她跑一个 20 秒的命令、期间再戳 → `{delivered:false, reason:'busy'}`（只播动画，不打扰） |
 | 8 | `kaka_say` 出声；同文本不重复计费 | ✅ | 首次 `cached=false, billed=20`；第二次 `cached=true, billed=0`；音频 `109 KB / 73 KB` WAV 落盘；今日计费 `66 字符 / 4 次 / 1 次缓存 / ¥0.0099` |
 | 9 | 提示音三档生效 | ✅ | 逐档实测：`off` 跑一轮 → 0 个 beep；`always` 跑一轮（短回复）→ `beep:done`；`important`（默认）下长任务/出错才响。五种提示音 `done/error/question/attention/pet` 均出现过且带正确会话 id |
-| 10 | 宠物只在咔咔会话出现 | ✅ | 槽位实测注册为 `dsh-yyz-kaka-pet`；组件渲染测试：`agentPreset: 'standard'` → 只出 0 尺寸锚点（16 字符，无图），`'kaka'` → 完整宠物（1456 字符，含 img/style），关闭开关 → 不出图；尺寸观感另有 80/96/112 对照图 `docs/pet-sizes.png` |
+| 10 | 宠物只在咔咔会话出现 | ✅ | 槽位注册为 `dsh-yyz-kaka-pet`；渲染测试覆盖四种情形：标准会话→只出锚点；咔咔会话+对话页签→完整宠物；咔咔会话+轨迹页签→只出锚点；关闭开关→不出图。尺寸观感见 `docs/pet-sizes.png` |
 | 11 | 心跳不泄漏定时器 | ✅ | 新增 `/kaka/life/tick` 计数：经历 8 次热重载 + 3 次重启后，10 秒内只涨 **2** 次（正好一个 5 秒定时器），没有重复实例 |
 | 12 | 窗口内 3h 无活动 → 写日记 → 做梦 → 醒 | ✅ | 自动链路（无手动触发）：`awake → quiet → diary → dreaming`；`dreams/2026-11-14.md` 自动写入；日记流水记录 `kaka_journal/kaka_memory/kaka_dream` |
 | 13 | 做梦产出 + 重启不重做 | ✅ | 产出：1599 字第一人称的梦 + 记忆整理成三段式；幂等：把 `lastDreamDate` 设为今天再排一个到期的 `dream` 事件，梦文件 mtime 不变（没有重做）；该字段存在 `state.json`，重启后仍在 |
