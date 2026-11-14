@@ -18,9 +18,9 @@
 | 8 | `kaka_say` 出声；同文本不重复计费 | ✅ | 首次 `cached=false, billed=20`；第二次 `cached=true, billed=0`；音频 `109 KB / 73 KB` WAV 落盘；今日计费 `66 字符 / 4 次 / 1 次缓存 / ¥0.0099` |
 | 9 | 提示音三档生效 | ✅ | 逐档实测：`off` 跑一轮 → 0 个 beep；`always` 跑一轮（短回复）→ `beep:done`；`important`（默认）下长任务/出错才响。五种提示音 `done/error/question/attention/pet` 均出现过且带正确会话 id |
 | 10 | 宠物只在咔咔会话出现 | 🟡 | 槽位 `conversation.input.overlay` 注册 `dsh-yyz-kaka-pet`；组件按 `projectionValues.agentPreset === 'kaka'` 判定；视觉待人工确认 |
-| 11 | 心跳不泄漏定时器 | 🟡 | 用 `ctx.effect` 清理；本轮经历 6 次热重载 + 2 次重启后生命周期行为正常；未做定时器计数实测 |
+| 11 | 心跳不泄漏定时器 | ✅ | 新增 `/kaka/life/tick` 计数：经历 8 次热重载 + 3 次重启后，10 秒内只涨 **2** 次（正好一个 5 秒定时器），没有重复实例 |
 | 12 | 窗口内 3h 无活动 → 写日记 → 做梦 → 醒 | ✅ | 自动链路（无手动触发）：`awake → quiet → diary → dreaming`；`dreams/2026-11-14.md` 自动写入；日记流水记录 `kaka_journal/kaka_memory/kaka_dream` |
-| 13 | 做梦产出 + 重启不重做 | 🟡 | 产出 ✅（1599 字梦 + 记忆整理成三段式）；`lastDreamDate` 幂等字段已落盘，跨重启保留，未专门重启复测 |
+| 13 | 做梦产出 + 重启不重做 | ✅ | 产出：1599 字第一人称的梦 + 记忆整理成三段式；幂等：把 `lastDreamDate` 设为今天再排一个到期的 `dream` 事件，梦文件 mtime 不变（没有重做）；该字段存在 `state.json`，重启后仍在 |
 | 14 | `kaka_remind` 到点：beep + 她开口 | ✅ | 订 1 分钟后闹钟 → 发件箱出现 `beep attention`（带会话 id）→ 会话收到「【咔咔的闹钟】提醒主人喝口白茶」→ 她答「主人，闹钟到点了——喝口白茶吧，凉了就换一杯热的。」 |
 | 15 | 冒泡不写历史、重冒泡 ≤3/天 | 🟡 | 轻冒泡（本地文案、零成本、不进会话历史）已出现；重冒泡（15% 概率 × 每日 3 次上限）刚实现，未跑满一天 |
 
