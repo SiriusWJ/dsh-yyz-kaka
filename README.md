@@ -73,23 +73,38 @@ settings.json        设置面板写入的配置
 
 - **卸载插件不会删除这些数据**；设置页有「清空记忆 / 清空日记」按钮（二次确认）。
 - 日记只写「做了什么」，**不写项目路径与文件名**。
-- 语音走 `https://api.deepseek.com/v1/tools/tts`，需要环境变量 `DEEPSEEK_API_KEY`。
+- 语音走 `https://api.deepseek.com/v1/tools/tts`，**优先使用 DSH 凭据服务里已存的
+  `DEEPSEEK_API_KEY`**（设置页的模型凭据），其次读环境变量，最后兜底直读
+  `$DSH_HOME/.credentials.yaml`。轮换 key 不需要重启。
   计费：1.5 元 / 万字符，**汉字算 2 个字符**；插件默认单条最多 200 计费字符（超出只念首句），
   同文本命中缓存不扣费。没有 key 时只是不能说话，其他功能不受影响。
+- 注意：**登录账号的会话 token 不能用于 TTS**（那是平台令牌，不是 API Key）。
 
 ## 开发
 
 ```powershell
-# 语法自检
-node --check lib/index.js
-node --check lib/runtime.js
-node --check preset/kaka-memory.mjs
-node --check preset/kaka-voice.mjs
-node --check client/client.js
-
-# 重新生成宠物精灵图（去掉原图周围装饰点、加粗描边）
-python tools/make-sprite.py
+npm run check      # 六个模块语法自检
+npm test           # 运行时单测（13 条）
+npm run smoke      # 预设插件冒烟（需要 DSH 的 Electron 运行时）
+npm run sprite     # 重新生成宠物精灵图
+npm run preview    # 重新生成详情页预览图
 ```
+
+调试与验收工具（直接打宿主本地接口）：
+
+```powershell
+node tools/acceptance.mjs <baseUrl>         # 一键验收：建会话 → 戳她 → 写日记 → 做梦
+node tools/inspect-session.mjs [sessionId]  # 读会话日志：预设/工具/AGENTS.md/人格
+```
+
+宿主调试接口（仅本地同源可用）：
+
+| 接口 | 作用 |
+|---|---|
+| `POST /kaka/home` | 确保「咔咔的家」存在（复用，不会重复创建） |
+| `POST /kaka/poke` | `{sessionId, text?}` 戳她；带 `text` 就是一句指定的话 |
+| `POST /kaka/life/force` | `{kind}` = diary / dream / ramble / wake / reminder，立刻做一次 |
+| `POST /kaka/life/debug` | 直接改生命计时器（验收用） |
 
 结构：
 
