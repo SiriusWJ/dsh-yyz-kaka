@@ -754,7 +754,12 @@ window.__ModuleLoader__.load({
         var viewportWidth = (typeof window !== 'undefined' && window.innerWidth) || 1280
         var viewportHeight = (typeof window !== 'undefined' && window.innerHeight) || 800
         var petLeft = parseFloat(style.left) || 12
-        var petTop = parseFloat(style.top) || (viewportHeight - 160)
+        var petTop = parseFloat(style.top)
+        if (!Number.isFinite(petTop)) {
+          // 还没量到位置时用底部锚点反推
+          var petBottom = parseFloat(style.bottom)
+          petTop = Number.isFinite(petBottom) ? viewportHeight - petBottom - size : viewportHeight - 200
+        }
         var dockTop = Math.max(60, petTop - 12)
         var panelLeft = Math.max(8, Math.min(petLeft, viewportWidth - 404 - 12))
         var panelStyle = {
@@ -766,7 +771,12 @@ window.__ModuleLoader__.load({
           pointerEvents: 'auto',
         }
         panelNode = createPortal(
-          h('div', { style: panelStyle }, h(KakaPanel, { t: t, part: panel, onClose: function () { setPanel(null) } })),
+          h(KakaPanel, {
+            t: t,
+            part: panel,
+            style: panelStyle,
+            onClose: function () { setPanel(null) },
+          }),
           document.body,
         )
       }
@@ -1623,7 +1633,7 @@ window.__ModuleLoader__.load({
         }, t('dream.action'))
         : null
 
-      return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true' },
+      return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true', style: props.style },
         h('div', { className: 'dsc-kaka-panel-head' },
           h('div', { className: 'dsc-kaka-panel-titles' },
             h('div', { className: 'dsc-kaka-panel-title' }, sectionTitles[section] || t('panel.title')),
