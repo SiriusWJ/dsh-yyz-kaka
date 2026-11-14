@@ -405,6 +405,8 @@ window.__ModuleLoader__.load({
       playing: false,
       enqueue: function (url) {
         if (!url) return
+        // 归一化：/kaka/audio/<sha>.wav → /kaka/audio?id=<sha>（精确路由才拿得到）
+        url = String(url).replace(/\/kaka\/audio\/([a-f0-9]{40})\.wav$/u, '/kaka/audio?id=$1')
         this.queue.push(url)
         this.pump()
       },
@@ -422,7 +424,10 @@ window.__ModuleLoader__.load({
         this.el.volume = this.volume
         var promise = this.el.play()
         if (promise && promise.catch) {
-          promise.catch(function () { self.playing = false })
+          promise.catch(function (err) {
+            self.playing = false
+            try { console.warn('[kaka] 播放失败：', err && err.message, url) } catch (e2) { /* ignore */ }
+          })
         }
       },
       stop: function () {
