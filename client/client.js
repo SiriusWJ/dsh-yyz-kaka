@@ -89,6 +89,9 @@ window.__ModuleLoader__.load({
         'row.homeSession.desc': '日记与梦投递到这里；第一次需要时会自动创建。',
         'action.openHome': '去她家看看',
         'action.selftest': '自检一下',
+        'row.diary': '最近的小本子',
+        'action.loadDiary': '翻日记',
+        'common.empty': '还没有日记',
         'common.diagLoading': '检查中…',
         'action.forceDream': '立刻做个梦',
         'action.ramble': '让她冒个泡',
@@ -161,6 +164,9 @@ window.__ModuleLoader__.load({
         'row.homeSession.desc': 'Diary and dreams are delivered here; created on demand.',
         'action.openHome': 'Open her home',
         'action.selftest': 'Self-test',
+        'row.diary': 'Recent journal',
+        'action.loadDiary': 'Read diary',
+        'common.empty': 'No diary yet',
         'common.diagLoading': 'Checking…',
         'action.forceDream': 'Dream now',
         'action.ramble': 'Say something',
@@ -669,6 +675,7 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-btn[data-pending="true"]{background:var(--dsw-alias-state-error-primary);color:#fff}',
       '.dsc-kaka-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--dsw-alias-label-secondary);word-break:break-all;max-width:360px;text-align:right}',
       '.dsc-kaka-hint{font-size:11px;color:var(--dsw-alias-label-secondary);text-align:right;margin-top:2px}',
+      '.dsc-kaka-diary{white-space:pre-wrap;font-size:12px;line-height:19px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;max-height:220px;overflow:auto;margin:0 14px 14px}',
     ].join('')
 
     function Switch(props) {
@@ -716,7 +723,30 @@ window.__ModuleLoader__.load({
       var [error, setError] = useState('')
       var [confirm, setConfirm] = useState('')
       var [diag, setDiag] = useState('')
+      var [diaryDays, setDiaryDays] = useState([])
+      var [diaryText, setDiaryText] = useState('')
+      var [diaryDay, setDiaryDay] = useState('')
       var saveTimer = useRef(null)
+
+      /** 读日记：先列最近的天，再按天取正文。 */
+      var loadDiary = useCallback(function (day) {
+        if (!day) {
+          getJson(API + '/diaries')
+            .then(function (payload) {
+              if (payload && payload.ok) setDiaryDays(payload.days || [])
+            })
+            .catch(function () {})
+          return
+        }
+        setDiaryDay(day)
+        getJson(API + '/diaries?date=' + encodeURIComponent(day))
+          .then(function (payload) {
+            if (payload && payload.ok) setDiaryText(payload.text || '')
+          })
+          .catch(function () {})
+      }, [])
+
+      useEffect(function () { loadDiary() }, [loadDiary])
 
       /** 自检：把 /kaka/selftest 的结果压成一行人话。 */
       var runSelftest = useCallback(function () {
@@ -929,6 +959,19 @@ window.__ModuleLoader__.load({
                   .catch(function (err) { setError(String(err && err.message || err)) })
               },
             }, t('action.openHome'))),
+          h(Row, { label: t('row.diary') },
+            h('div', { className: 'dsc-kaka-seg' },
+              (diaryDays.length ? diaryDays.slice(0, 3) : ['']).map(function (day, index) {
+                return h('button', {
+                  key: day || 'empty',
+                  type: 'button',
+                  'data-active': String(diaryDay) === String(day) ? 'true' : 'false',
+                  onClick: function () { loadDiary(day || '') },
+                }, day || t('action.loadDiary'))
+              }))),
+          diaryText
+            ? h('pre', { className: 'dsc-kaka-diary' }, diaryText)
+            : (diaryDay ? h('pre', { className: 'dsc-kaka-diary' }, t('common.empty')) : null),
           h(Row, { label: t('action.selftest'), desc: diag || t('row.homeSession.desc') },
             h('button', {
               type: 'button', className: 'dsc-kaka-btn',

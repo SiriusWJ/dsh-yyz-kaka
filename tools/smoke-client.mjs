@@ -257,7 +257,7 @@ const settingsMarkup = render(React.createElement(settingsSlot.component, {
   openSession: () => true,
   initialSettings: petSettings,
 }))
-for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'group.data', 'row.petEnabled', 'action.selftest']) {
+for (const key of ['group.pet', 'group.voice', 'group.notify', 'group.life', 'group.data', 'row.petEnabled', 'action.selftest', 'row.diary']) {
   if (!settingsMarkup.includes(key)) throw new Error(`设置页缺少分组/行：${key}`)
 }
 
