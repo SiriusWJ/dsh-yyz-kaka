@@ -6,8 +6,6 @@
  * `api/file?path=…` 显示，所以聊天里能直接看到成品，面板里也能翻。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
 import { loadDshPackage } from '../lib/dsh-modules.js'
 import { log } from '../lib/runtime.js'
 import { saveArt } from '../lib/art-store.mjs'
@@ -36,8 +34,8 @@ const DRAW_GUIDE = `## 你的画笔（kaka_draw）
 - 不要写 \`<script>\`、\`<foreignObject>\`、\`on*=...\`、外链 \`href\`；不要嵌图片
 
 **画完必须做一件事**
-把工具返回的 \`markdown\` 字段原样放进你的回复里（形如 \`![标题](C:/Users/…/art/xxx.svg)\`），
-这样主人才能在对话里看到画。不要自己改路径，也不要用反斜杠。`
+把工具返回的 \`markdown\` 字段原样放进你的回复里（形如 \`![标题](C:\\Users\\…\\art\\xxx.svg)\`，Windows 反斜杠路径），
+这样主人才能在对话里看到画。保持反斜杠原样，**不要**换成正斜杠（正斜杠在聊天里渲染不出来）。`
 
 /** 去掉脚本、外链与事件属性；补上必需的根属性。 */
 function sanitizeSvg(raw) {
@@ -123,28 +121,13 @@ export async function apply(ctx, config) {
         session: exec?.agent?.id || '',
       })
       log('画了一张', saved.id, saved.kind, saved.title)
-
-      // 聊天里要显示，图片就得落在会话工作区里：
-      // 宿主的 api/file 只可靠地服务工作区（或已授权根）内的文件。
-      const cwd = exec?.cwd || exec?.session?.cwd || exec?.agent?.cwd || process.cwd()
-      let displayPath = saved.file
-      try {
-        const dir = join(cwd, '.kaka-art')
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-        const copy = join(dir, basename(saved.file))
-        writeFileSync(copy, svg, 'utf8')
-        displayPath = copy
-      } catch (err) {
-        log('工作区副本失败，退回数据目录', err?.message || err)
-      }
-      const markdown = `![${saved.title}](${displayPath})`
       return {
         ok: true,
         id: saved.id,
         kind: saved.kind,
         title: saved.title,
         url: saved.url,
-        markdown,
+        markdown: saved.markdown,
         chars: svg.length,
       }
     },
