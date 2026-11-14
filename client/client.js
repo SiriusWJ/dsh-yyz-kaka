@@ -62,6 +62,12 @@ window.__ModuleLoader__.load({
         'view.loading': '读取中…',
         'view.hint': '这些都是咔咔自己的小本子，所有咔咔会话共享。',
         'view.chars': '字符',
+        'view.memoryShort': '记忆',
+        'view.portrait': '画像',
+        'view.portraitEmpty': '她还没画过主人的样子',
+        'view.portraitHint': '跟她说「画张我」，她就会用画笔把你留下来',
+        'view.cloudHint': '出现越多，说明这件事她越在意',
+
         'about.tab': '关于',
         'dock.open': '咔咔的小本子',
         'dock.about': '关于咔咔',
@@ -196,6 +202,12 @@ window.__ModuleLoader__.load({
         'view.loading': 'Loading…',
         'view.hint': "Kaka's own notebooks, shared by every Kaka session.",
         'view.chars': 'chars',
+        'view.memoryShort': 'Memory',
+        'view.portrait': 'Portrait',
+        'view.portraitEmpty': "She hasn't drawn you yet",
+        'view.portraitHint': 'Ask her to "draw me" and she will keep you here',
+        'view.cloudHint': 'The bigger, the more she cares',
+
         'about.tab': 'About',
         'dock.open': "Kaka's notebook",
         'dock.about': 'About her',
@@ -854,7 +866,7 @@ window.__ModuleLoader__.load({
 
       return h(React.Fragment, null,
         h('span', { ref: anchorRef, style: { display: 'inline-block', width: 0, height: 0 } }),
-        h('style', null, PET_CSS + PANEL_CSS),
+        h('style', null, PET_CSS + PANEL_CSS + NOTEBOOK_CSS),
         createPortal(petNode, document.body),
         panelNode,
       )
@@ -1318,6 +1330,50 @@ window.__ModuleLoader__.load({
       check: [['path', { d: 'M4 7l2 2 3-3M4 15l2 2 3-3M12 8h8M12 16h8' }]],
     }
 
+    /* ── 日记本 ── */
+    var NOTEBOOK_CSS = [
+      '.dsc-kaka-note{position:relative;border-radius:12px;padding:12px 14px 14px 32px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
+      '.dsc-kaka-note::before{content:"";position:absolute;left:24px;top:8px;bottom:8px;width:1px;background:color-mix(in srgb, var(--dsw-alias-brand-primary) 45%, transparent)}',
+      '.dsc-kaka-note::after{content:"";position:absolute;inset:0;border-radius:12px;pointer-events:none;background:repeating-linear-gradient(to bottom, transparent 0 25px, color-mix(in srgb, var(--dsw-alias-border-l1) 70%, transparent) 25px 26px);opacity:.55}',
+      '.dsc-kaka-note-date{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}',
+      '.dsc-kaka-note-date b{font-size:15px;font-weight:650;color:var(--dsw-alias-label-primary);font-family:"KaiTi","STKaiti","楷体",serif}',
+      '.dsc-kaka-note-date span{font-size:11px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-note p{position:relative;z-index:1;margin:0 0 2px;font-family:"KaiTi","STKaiti","楷体",serif;font-size:14px;line-height:26px;color:var(--dsw-alias-label-primary);text-indent:2em}',
+      '.dsc-kaka-note p:first-letter{color:var(--dsw-alias-brand-primary)}',
+      '.dsc-kaka-note-art{position:relative;z-index:1;margin:10px 0 4px;display:flex;gap:8px;flex-wrap:wrap}',
+      '.dsc-kaka-note-art figure{margin:0;display:flex;flex-direction:column;gap:4px}',
+      '.dsc-kaka-note-art img{width:104px;height:78px;object-fit:contain;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}',
+      '.dsc-kaka-note-art figcaption{font-size:10px;color:var(--dsw-alias-label-secondary);text-align:center}',
+      /* ── 记忆云 ── */
+      '.dsc-kaka-cloud{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding:10px 2px 12px;border-bottom:1px dashed var(--dsw-alias-border-l1);margin-bottom:10px}',
+      '.dsc-kaka-cloud i{display:inline-block;font-style:normal;padding:3px 9px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);animation:dsc-kaka-float 7s ease-in-out infinite}',
+      '.dsc-kaka-cloud i.is-hot{color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, transparent);background:color-mix(in srgb, var(--dsw-alias-brand-primary) 10%, transparent)}',
+      '@keyframes dsc-kaka-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}',
+      /* ── 画像 ── */
+      '.dsc-kaka-portrait{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 2px}',
+      '.dsc-kaka-portrait img{width:100%;max-width:250px;border-radius:14px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);box-shadow:0 8px 22px rgba(0,0,0,.14)}',
+      '.dsc-kaka-portrait figcaption{font-size:11px;color:var(--dsw-alias-label-secondary)}',
+      '.dsc-kaka-portrait-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 0;color:var(--dsw-alias-label-secondary);font-size:12px;text-align:center}',
+      '.dsc-kaka-portrait-empty img{width:56px;height:56px;opacity:.4}',
+      '.dsc-kaka-canvas-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}',
+      '.dsc-kaka-canvas-strip img{width:64px;height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}',
+    ].join('')
+
+    /** 从记忆正文里抽 `[标签]` 做成记忆云。 */
+    function parseMemoryTags(text) {
+      var counts = new Map()
+      for (var raw of String(text || '').split('\n')) {
+        var match = /^\s*[-*]\s*\[([^\]]{1,20})\]/u.exec(raw)
+        if (!match) continue
+        var tag = match[1].trim()
+        counts.set(tag, (counts.get(tag) || 0) + 1)
+      }
+      return Array.from(counts.entries())
+        .map(function (entry) { return { tag: entry[0], count: entry[1] } })
+        .sort(function (a, b) { return b.count - a.count })
+        .slice(0, 24)
+    }
+
     var WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
     var MOOD_KEYS = {
@@ -1456,8 +1512,8 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 咔咔的小本子（浮层）。图标坞三个入口：
-     * 关于 / 事项 / 记忆；记忆里再分 日记 / 梦 / 长记忆 / 主人画像。
+     * 咔咔的小本子（浮层）。图标坞一个入口，内部三页：
+     * 关于 / 事项 / 记忆（记忆里再分 日记 / 记忆 / 画像）。
      */
     function KakaPanel(props) {
       var t = props.t
@@ -1468,6 +1524,8 @@ window.__ModuleLoader__.load({
       var [about, setAbout] = useState(null)
       var [day, setDay] = useState('')
       var [text, setText] = useState('')
+      var [dayArt, setDayArt] = useState([])
+      var [art, setArt] = useState({ items: [], portrait: null })
       var [plan, setPlan] = useState([])
       var [loading, setLoading] = useState(false)
       var [note, setNote] = useState('')
@@ -1485,6 +1543,11 @@ window.__ModuleLoader__.load({
         getJson(API + '/about')
           .then(function (payload) { if (payload && payload.ok) setAbout(payload) })
           .catch(function (err) { setError(String(err && err.message || err)) })
+        getJson(API + '/art/list')
+          .then(function (payload) {
+            if (payload && payload.ok) setArt({ items: payload.items || [], portrait: payload.portrait || null })
+          })
+          .catch(function () { /* 画册拉不到不影响其它页 */ })
       }, [])
 
       useEffect(function () {
@@ -1501,8 +1564,13 @@ window.__ModuleLoader__.load({
         var cancelled = false
         setError('')
 
-        // 长记忆 / 主人画像
         if (tab === 'agent' || tab === 'user') {
+          if (tab === 'user') {
+            // 画像页只看画，不用拉记忆正文
+            setText('')
+            setLoading(false)
+            return function () { cancelled = true }
+          }
           setLoading(true)
           getJson(API + '/view?part=memory&target=' + tab)
             .then(function (payload) {
@@ -1515,19 +1583,20 @@ window.__ModuleLoader__.load({
           return function () { cancelled = true }
         }
 
-        // 日记 / 梦
         var list = (tab === 'diary' ? (meta && meta.days) : []) || []
         var selected = day && list.indexOf(day) >= 0 ? day : (list[0] || '')
         if (!selected) {
           setText('')
+          setDayArt([])
           return function () { cancelled = true }
         }
         if (selected !== day) setDay(selected)
         setLoading(true)
-        getJson(API + '/view?part=' + tab + '&date=' + encodeURIComponent(selected))
+        getJson(API + '/view?part=diary&date=' + encodeURIComponent(selected))
           .then(function (payload) {
             if (cancelled) return
             setText(payload && payload.ok ? (payload.text || '') : '')
+            setDayArt(payload && Array.isArray(payload.art) ? payload.art : [])
             if (!payload || !payload.ok) setError(String(payload && payload.error || 'load failed'))
           })
           .catch(function (err) { if (!cancelled) setError(String(err && err.message || err)) })
@@ -1543,46 +1612,38 @@ window.__ModuleLoader__.load({
 
       var tabs = [
         { value: 'diary', label: t('view.diary') },
-        { value: 'agent', label: t('view.agent') },
-        { value: 'user', label: t('view.user') },
+        { value: 'agent', label: t('view.memoryShort') },
+        { value: 'user', label: t('view.portrait') },
       ]
 
       var chips = null
       if (section === 'memory') {
-        if (tab === 'agent' || tab === 'user') {
-          chips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
-            tabs.map(function (item) {
-              return h('button', {
-                key: item.value,
-                type: 'button',
-                className: 'dsc-kaka-chip' + (tab === item.value ? ' is-active' : ''),
-                onClick: function () { setTab(item.value); setDay('') },
-              }, item.label)
-            }))
-        } else {
-          var days = (tab === 'diary' ? ((meta && meta.days) || []) : []).slice(0, 8)
-          chips = h(React.Fragment, null,
-            h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 8 } },
-              tabs.map(function (item) {
+        var tabChips = h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 8 } },
+          tabs.map(function (item) {
+            return h('button', {
+              key: item.value,
+              type: 'button',
+              className: 'dsc-kaka-chip' + (tab === item.value ? ' is-active' : ''),
+              onClick: function () { setTab(item.value); setDay('') },
+            }, item.label)
+          }))
+
+        var dayChips = null
+        if (tab === 'diary') {
+          var days = ((meta && meta.days) || []).slice(0, 8)
+          dayChips = days.length
+            ? h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
+              days.map(function (item) {
                 return h('button', {
-                  key: item.value,
+                  key: item,
                   type: 'button',
-                  className: 'dsc-kaka-chip' + (tab === item.value ? ' is-active' : ''),
-                  onClick: function () { setTab(item.value); setDay('') },
-                }, item.label)
-              })),
-            days.length
-              ? h('div', { className: 'dsc-kaka-view-chips', style: { marginBottom: 10 } },
-                days.map(function (item) {
-                  return h('button', {
-                    key: item,
-                    type: 'button',
-                    className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
-                    onClick: function () { setDay(item) },
-                  }, item)
-                }))
-              : null)
+                  className: 'dsc-kaka-chip' + (day === item ? ' is-active' : ''),
+                  onClick: function () { setDay(item) },
+                }, item)
+              }))
+            : null
         }
+        chips = h(React.Fragment, null, tabChips, dayChips)
       }
 
       var body
@@ -1602,6 +1663,21 @@ window.__ModuleLoader__.load({
           : h('div', { className: 'dsc-kaka-view-empty' },
             h('img', { src: ASSET, alt: '' }),
             h('div', null, t('plan.empty')))
+      } else if (tab === 'user') {
+        body = h('div', null,
+          art.portrait
+            ? h('figure', { className: 'dsc-kaka-portrait' },
+              h('img', { src: art.portrait.url, alt: art.portrait.title }),
+              h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)))
+            : h('div', { className: 'dsc-kaka-portrait-empty' },
+              h('img', { src: ASSET, alt: '' }),
+              h('div', null, t('view.portraitEmpty')),
+              h('div', { style: { opacity: .75 } }, t('view.portraitHint'))),
+          art.items.length
+            ? h('div', { className: 'dsc-kaka-canvas-strip' }, art.items.slice(0, 12).map(function (item) {
+              return h('img', { key: item.id, src: item.url, alt: item.title, title: item.title })
+            }))
+            : null)
       } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
           h('i', { style: { width: '92%' } }), h('i', { style: { width: '78%' } }), h('i', { style: { width: '64%' } }))
@@ -1609,28 +1685,46 @@ window.__ModuleLoader__.load({
         body = h('div', { className: 'dsc-kaka-view-empty' },
           h('img', { src: ASSET, alt: '' }),
           h('div', null, t('view.empty')))
-      } else if (tab === 'agent' || tab === 'user') {
-        body = h('div', { className: 'dsc-kaka-prose' }, parseMemory(text).map(function (block, index) {
-          var key = 'b' + index
-          if (block.type === 'heading') return h('h3', { key }, block.text)
-          if (block.type === 'list') {
-            return h('ul', { key }, block.items.map(function (item, itemIndex) {
-              return h('li', { key: key + '-' + itemIndex }, item)
+      } else if (tab === 'agent') {
+        var tags = parseMemoryTags(text)
+        body = h('div', null,
+          tags.length
+            ? h('div', { className: 'dsc-kaka-cloud' }, tags.map(function (item, index) {
+              var size = Math.min(15.5, 11.5 + item.count * 1.1)
+              return h('i', {
+                key: item.tag,
+                className: item.count > 1 ? 'is-hot' : undefined,
+                style: { fontSize: size + 'px', animationDelay: (index * 0.35) + 's' },
+                title: t('view.cloudHint'),
+              }, item.tag)
             }))
-          }
-          return h('p', { key }, block.text)
-        }))
-      } else {
-        var selectedDay = day || ((tab === 'diary' ? ((meta && meta.days) || []) : [])[0] || '')
-        body = h(React.Fragment, null,
-          selectedDay
-            ? h('div', { className: 'dsc-kaka-panel-meta' },
-              h('b', null, formatDayTitle(selectedDay)),
-              h('span', null, weekdayOf(selectedDay)))
             : null,
-          h('div', { className: 'dsc-kaka-prose' }, splitProse(text).map(function (paragraph, index) {
-            return h('p', { key: 'p' + index, className: index === 0 ? 'dsc-kaka-lead' : undefined }, paragraph)
+          h('div', { className: 'dsc-kaka-prose' }, parseMemory(text).map(function (block, index) {
+            var key = 'b' + index
+            if (block.type === 'heading') return h('h3', { key }, block.text)
+            if (block.type === 'list') {
+              return h('ul', { key }, block.items.map(function (item, itemIndex) {
+                return h('li', { key: key + '-' + itemIndex }, item)
+              }))
+            }
+            return h('p', { key }, block.text)
           })))
+      } else {
+        var selectedDay = day || ((meta && meta.days) || [])[0] || ''
+        body = h('div', { className: 'dsc-kaka-note' },
+          h('div', { className: 'dsc-kaka-note-date' },
+            h('b', null, formatDayTitle(selectedDay)),
+            h('span', null, weekdayOf(selectedDay))),
+          splitProse(text).map(function (paragraph, index) {
+            return h('p', { key: 'p' + index }, paragraph)
+          }),
+          dayArt.length
+            ? h('div', { className: 'dsc-kaka-note-art' }, dayArt.map(function (item) {
+              return h('figure', { key: item.id },
+                h('img', { src: item.url, alt: item.title }),
+                h('figcaption', null, item.title))
+            }))
+            : null)
       }
 
       return h('div', { className: 'dsc-kaka-panel', 'data-kaka-panel': 'true', style: props.style },
@@ -1730,6 +1824,7 @@ window.__ModuleLoader__.load({
       KakaAbout: KakaAbout,
       KakaPanel: KakaPanel,
       splitProse: splitProse,
+      parseMemoryTags: parseMemoryTags,
       parseMemory: parseMemory,
       formatDayTitle: formatDayTitle,
       weekdayOf: weekdayOf,

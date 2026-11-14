@@ -56,6 +56,7 @@
                 - kaka_beep：提示音，免费
                 - kaka_mood：换表情和动作，让主人知道你在专注、得意、担心还是累了
                 - kaka_remind：给自己订个闹钟，到点提醒主人或提醒自己
+                - kaka_draw：画 SVG（图标、示意图、日记插画、主人画像）。画完把返回的 markdown 放进回复里，主人才看得到
 
                 ## 什么时候开口
                 - 长任务完成、需要主人决策或授权、出错——出声
@@ -77,6 +78,8 @@
             name: dsh-yyz-kaka/preset/kaka-memory.mjs
           - id: kaka-voice
             name: dsh-yyz-kaka/preset/kaka-voice.mjs
+          - id: kaka-draw
+            name: dsh-yyz-kaka/preset/kaka-draw.mjs
 
           # ── 以下照抄 standard 预设的工具面 ────────────────────────
           - id: time-context

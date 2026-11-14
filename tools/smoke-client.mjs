@@ -396,10 +396,10 @@ const panelMarkup = render(React.createElement(petSlot.component, {
   sessionId: 'session-x',
   t,
   initialSettings: petSettings,
-  initialPanel: 'about',
+  initialPanel: 'memory',
   useSessions: useSessionsFor('kaka'),
 }))
-for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'dock.memory', 'panel.close']) {
+for (const key of ['data-kaka-panel', 'dsc-kaka-panel-tabs', 'dock.about', 'dock.plan', 'dock.memory', 'panel.close', 'view.diary', 'view.memoryShort', 'view.portrait']) {
   if (!panelMarkup.includes(key)) throw new Error('小本子面板缺少：' + key)
 }
 
@@ -413,6 +413,8 @@ if (parsed[0].type !== 'heading' || parsed[1].type !== 'list' || parsed[1].items
   throw new Error('parseMemory 结果不对：' + JSON.stringify(parsed))
 }
 if (helpers.formatDayTitle('2026-11-14') !== '11 月 14 日') throw new Error('formatDayTitle 结果不对')
+const tags = helpers.parseMemoryTags('- [身份] 咔咔\n- [身份] 螃蟹\n- [偏好] 白茶\n普通一行')
+if (tags[0].tag !== '身份' || tags[0].count !== 2 || tags.length !== 2) throw new Error('记忆云统计不对：' + JSON.stringify(tags))
 if (!/^星期[日一二三四五六]$/.test(helpers.weekdayOf('2026-11-14'))) throw new Error('weekdayOf 结果不对')
 
 console.log('注入槽位 :', injected.join(', '))
