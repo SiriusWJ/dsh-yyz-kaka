@@ -12,8 +12,7 @@
  * 下一次装配才会变一次。代价是记忆长度每轮都占 token——和"持久消息"一样。
  */
 
-import { defineTool } from '@deepseek-ai/dsh-tools'
-
+import { loadDshPackage } from '../lib/dsh-modules.js'
 import {
   MEMORY_LIMIT,
   appendDiaryNote,
@@ -68,7 +67,9 @@ function renderMemorySection() {
   return parts.join('\n\n')
 }
 
-export function apply(ctx) {
+export async function apply(ctx) {
+  const { defineTool } = await loadDshPackage('@deepseek-ai/dsh-tools')
+
   // ── 1. 每轮注入记忆 ───────────────────────────────────────────────
   ctx.systemPrompt.variable(MEMORY_VAR, () => renderMemorySection())
   ctx.systemPrompt.section({
@@ -91,13 +92,11 @@ export function apply(ctx) {
       },
       target: {
         type: 'string',
-        required: false,
         enum: ['agent', 'user'],
         description: 'agent（默认）是咔咔自己的长记忆 MEMORY.md；user 是主人画像 USER.md。',
       },
       text: {
         type: 'string',
-        required: false,
         description: 'append 时要追加的一行（建议 `- [标签] 一句话`）；replace 时的完整新内容。',
       },
     },
@@ -153,7 +152,6 @@ export function apply(ctx) {
     parameters: {
       date: {
         type: 'string',
-        required: false,
         description: 'YYYY-MM-DD；省略则读今天。传 "list" 列出最近 14 天。',
       },
     },

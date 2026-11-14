@@ -8,19 +8,20 @@
  *   kaka_remind 给自己订个闹钟（存进生命线程的事件表，重启不丢）
  */
 
-import { defineTool } from '@deepseek-ai/dsh-tools'
-
+import { loadDshPackage } from '../lib/dsh-modules.js'
 import {
   beep,
   currentMood,
+  getSettings,
   log,
   pushMood,
   scheduleEvent,
   synthesize,
+  voiceAvailable,
 } from '../lib/runtime.js'
 
 export const name = 'kaka-voice'
-export const inject = ['tools']
+export const inject = ['tools', 'systemPrompt']
 
 const VOICES = ['stella', 'tide']
 const MOODS = ['idle', 'focus', 'proud', 'worried', 'tired', 'dreaming', 'petted', 'sleeping']
@@ -66,7 +67,27 @@ function resolveReminderTime(args) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-export function apply(ctx) {
+export async function apply(ctx) {
+  const { defineTool } = await loadDshPackage('@deepseek-ai/dsh-tools')
+
+  // ── 0. 把"嗓子当前状态"告诉模型：让设置面板上的开关真的影响行为 ──
+  ctx.systemPrompt.variable('kaka_voice_rules', () => {
+    const settings = getSettings()
+    const lines = ['## 嗓子（当前设置）']
+    lines.push(`- 自动朗读：${settings.voice.autoRead ? '开——重要节点可以自己开口' : '关——只有主人点名时才说话'}`)
+    lines.push(`- 单条上限：${settings.voice.maxBilledChars} 计费字符（超出只念首句）`)
+    lines.push(`- 提示音档位：${{ off: '禁用', important: '重要', always: '每次' }[settings.notify.level] || '重要'}`)
+    if (!voiceAvailable()) {
+      lines.push('- ⚠️ 当前进程没有 DEEPSEEK_API_KEY：kaka_say 会失败，别尝试说话，用文字或 kaka_beep 代替。')
+    }
+    return lines.join('\n')
+  })
+  ctx.systemPrompt.section({
+    name: 'kaka:voice-rules',
+    order: 10101,
+    text: '{{kaka_voice_rules}}',
+  })
+
   // ── 1. kaka_say ──────────────────────────────────────────────────
   ctx.tools.register(defineTool({
     name: 'kaka_say',
@@ -74,12 +95,10 @@ export function apply(ctx) {
     parameters: {
       text: {
         type: 'string',
-        required: false,
         description: '要念的内容；省略就念你上一条回复。只念真正值得主人听的那一句，不要整篇念。',
       },
       voice: {
         type: 'string',
-        required: false,
         enum: VOICES,
         description: '音色：stella（女声，默认）或 tide（男声）。',
       },
@@ -123,7 +142,6 @@ export function apply(ctx) {
     parameters: {
       kind: {
         type: 'string',
-        required: false,
         enum: BEEP_KINDS,
         description: 'done 完成 · question 需要主人回答 · error 出错 · attention 提醒 · pet 被摸。默认 done。',
       },
@@ -156,12 +174,10 @@ export function apply(ctx) {
       },
       action: {
         type: 'string',
-        required: false,
         description: '可选的小动作名，例如 claw / wiggle / celebrate / shake / doze / sleep / writing。',
       },
       speech: {
         type: 'string',
-        required: false,
         description: '可选：顺带念出来的一句话（会调用语音合成并计费）。',
       },
     },
@@ -207,12 +223,10 @@ export function apply(ctx) {
     parameters: {
       at: {
         type: 'string',
-        required: false,
         description: '绝对时间："HH:mm"（今天或明天）或 ISO 字符串。与 afterMinutes 二选一。',
       },
       afterMinutes: {
         type: 'number',
-        required: false,
         description: '多少分钟后。',
       },
       what: {
@@ -222,7 +236,6 @@ export function apply(ctx) {
       },
       mode: {
         type: 'string',
-        required: false,
         enum: ['notify', 'prompt'],
         description: 'notify 只响提示音；prompt（默认）还会把提醒投递给你，由你开口说。',
       },

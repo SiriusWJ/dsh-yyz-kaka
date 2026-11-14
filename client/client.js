@@ -74,6 +74,7 @@ window.__ModuleLoader__.load({
         'row.maxChars': '单条上限',
         'row.maxChars.desc': '计费字符；超出只念首句。汉字算 2 个。',
         'row.billing': '今日计费',
+        'voice.missingKey': '未检测到 DEEPSEEK_API_KEY：提示音照常，但暂时不能说话。',
         'row.notifyLevel': '提示音',
         'row.notifyLevel.desc': '重要 = 长任务完成 / 需要决策 / 出错时响。',
         'row.lifeEnabled': '生命线程',
@@ -140,6 +141,7 @@ window.__ModuleLoader__.load({
         'row.maxChars': 'Per-line cap',
         'row.maxChars.desc': 'Billed characters; longer text reads the first sentence only.',
         'row.billing': 'Today',
+        'voice.missingKey': 'No DEEPSEEK_API_KEY found: beeps still work, speech is unavailable.',
         'row.notifyLevel': 'Notification',
         'row.notifyLevel.desc': 'Important = long task done / decision needed / error.',
         'row.lifeEnabled': 'Life thread',
@@ -654,7 +656,7 @@ window.__ModuleLoader__.load({
           .then(function (payload) {
             if (payload && payload.ok) {
               setSettings(payload.settings)
-              setMeta({ billing: payload.billing, audio: payload.audio, homeSessionId: payload.homeSessionId })
+              setMeta({ billing: payload.billing, audio: payload.audio, homeSessionId: payload.homeSessionId, voiceAvailable: payload.voiceAvailable })
             }
           })
           .catch(function (err) { setError(String(err && err.message || err)) })
@@ -730,6 +732,12 @@ window.__ModuleLoader__.load({
             h(Switch, { checked: !!settings.pet.ramble, onChange: function (v) { patch('pet', 'ramble', v) } }))),
 
         h(Group, { title: t('group.voice') },
+          meta && meta.voiceAvailable === false
+            ? h('div', {
+              className: 'dsc-kaka-row',
+              style: { color: 'var(--dsw-alias-state-warn-primary)', fontSize: 12 },
+            }, t('voice.missingKey'))
+            : null,
           h(Row, { label: t('row.voiceId'), desc: t('row.voiceId.desc') },
             h(Segmented, {
               value: settings.voice.voiceId,
