@@ -124,7 +124,7 @@ export async function apply(ctx) {
     async execute(args, exec) {
       const text = String(args.text ?? '').trim() || lastAssistantText(exec.agent)
       if (!text) throw new Error('没有可念的内容：请把要念的那句话作为 text 传进来')
-      const result = await synthesize({ text, voiceId: args.voice, signal: exec.signal })
+      const result = await synthesize({ text, voiceId: args.voice, signal: exec.signal, session: exec.agent?.id })
       return {
         cached: result.cached,
         billedChars: result.billedChars,
@@ -154,8 +154,8 @@ export async function apply(ctx) {
       },
       render: (_args, value) => [{ type: 'text', text: `响了提示音 ${value.sound}。` }],
     },
-    execute(args) {
-      const result = beep(args.kind || 'done')
+    execute(args, exec) {
+      const result = beep(args.kind || 'done', exec.agent?.id)
       return Promise.resolve({ sound: result.sound })
     },
     presentCall: args => ({ card: 'generic', title: `提示音 ${args.kind || 'done'}`, kind: 'other' }),
@@ -198,20 +198,23 @@ export async function apply(ctx) {
       }],
     },
     async execute(args, exec) {
-      const snapshot = pushMood(args.mood, args.action || '')
+      const snapshot = pushMood(args.mood, args.action || '', { session: exec.agent?.id })
       let spoken = false
       let note = ''
       const speech = String(args.speech ?? '').trim()
       if (speech) {
         try {
-          await synthesize({ text: speech, signal: exec.signal })
+          await synthesize({ text: speech, signal: exec.signal, session: exec.agent?.id })
           spoken = true
         } catch (err) {
           note = `（想说话但没成功：${err?.message || err}）`
           log('kaka_mood 顺带说话失败', err?.message || err)
         }
       }
-      return { mood: snapshot.name, action: snapshot.action, spoken, note: note || undefined }
+      // 注意：输出必须是"无损 JSON"——不能带 undefined，否则 DSH 会判 INVALID_TOOL_OUTPUT。
+      const output = { mood: snapshot.name, action: snapshot.action, spoken }
+      if (note) output.note = note
+      return output
     },
     presentCall: args => ({ card: 'generic', title: `心情 · ${args.mood}`, kind: 'other' }),
   }))
