@@ -66,6 +66,7 @@ window.__ModuleLoader__.load({
         'view.portrait': '画像',
         'view.portraitEmpty': '她还没画过主人的样子',
         'view.portraitHint': '跟她说「画张我」，她就会用画笔把你留下来',
+        'view.portraitNote': '她眼里的主人',
         'view.cloudHint': '出现越多，说明这件事她越在意',
 
         'about.tab': '关于',
@@ -207,6 +208,7 @@ window.__ModuleLoader__.load({
         'view.portrait': 'Portrait',
         'view.portraitEmpty': "She hasn't drawn you yet",
         'view.portraitHint': 'Ask her to "draw me" and she will keep you here',
+        'view.portraitNote': 'How she sees you',
         'view.cloudHint': 'The bigger, the more she cares',
 
         'about.tab': 'About',
@@ -1380,8 +1382,6 @@ window.__ModuleLoader__.load({
       '.dsc-kaka-portrait figcaption{font-size:11px;color:var(--dsw-alias-label-secondary)}',
       '.dsc-kaka-portrait-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 0;color:var(--dsw-alias-label-secondary);font-size:12px;text-align:center}',
       '.dsc-kaka-portrait-empty img{width:56px;height:56px;opacity:.4}',
-      '.dsc-kaka-canvas-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}',
-      '.dsc-kaka-canvas-strip img{width:64px;height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}',
     ].join('')
 
     /** 从记忆正文里抽 `[标签]` 做成记忆云。 */
@@ -1692,20 +1692,16 @@ window.__ModuleLoader__.load({
             h('img', { src: ASSET, alt: '' }),
             h('div', null, t('plan.empty')))
       } else if (tab === 'user') {
-        body = h('div', null,
-          art.portrait
-            ? h('figure', { className: 'dsc-kaka-portrait' },
-              h('img', { src: art.portrait.url, alt: art.portrait.title }),
-              h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)))
-            : h('div', { className: 'dsc-kaka-portrait-empty' },
-              h('img', { src: ASSET, alt: '' }),
-              h('div', null, t('view.portraitEmpty')),
-              h('div', { style: { opacity: .75 } }, t('view.portraitHint'))),
-          art.items.length
-            ? h('div', { className: 'dsc-kaka-canvas-strip' }, art.items.slice(0, 12).map(function (item) {
-              return h('img', { key: item.id, src: item.url, alt: item.title, title: item.title })
-            }))
-            : null)
+        // 画像页只放主人的形象；别的画作属于「日记」和聊天，不在这里堆成画板
+        body = art.portrait
+          ? h('figure', { className: 'dsc-kaka-portrait' },
+            h('img', { src: art.portrait.url, alt: art.portrait.title }),
+            h('figcaption', null, '「' + art.portrait.title + '」 · ' + formatDayTitle(art.portrait.date)),
+            h('figcaption', { style: { opacity: .7 } }, t('view.portraitNote')))
+          : h('div', { className: 'dsc-kaka-portrait-empty' },
+            h('img', { src: ASSET, alt: '' }),
+            h('div', null, t('view.portraitEmpty')),
+            h('div', { style: { opacity: .75 } }, t('view.portraitHint')))
       } else if (loading) {
         body = h('div', { className: 'dsc-kaka-skel' },
           h('i', { style: { width: '92%' } }), h('i', { style: { width: '78%' } }), h('i', { style: { width: '64%' } }))
